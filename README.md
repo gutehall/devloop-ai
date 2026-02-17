@@ -36,6 +36,7 @@ Linear auto-updates
 
 ```
 ai/
+  ai_go.py        # Full start flow: pull, pick issue, branch, open Cursor, optional status update
   ai_start.py     # Pick issue → create branch → open Cursor
   ai_pr.py        # Generate PR description
   ai_create_pr.py # Create PR via GitHub CLI
@@ -73,11 +74,13 @@ Add to your `~/.zshrc`:
 export LINEAR_API_KEY="YOUR_LINEAR_API_KEY"
 export LINEAR_READY_STATE="Ready for build"
 # Optional: LINEAR_MAIN_BRANCH=origin/main  (default: origin/main or git config)
+# Optional: LINEAR_IN_PROGRESS_STATE="In Progress"  (for ai-go --set-in-progress)
 ```
 
 Add aliases:
 
 ```bash
+alias ai-go='python3 <path/to/your/repo>/ai/ai_go.py'
 alias ai-start='python3 <path/to/your/repo>/ai/ai_start.py'
 alias ai-pr='python3 <path/to/your/repo>/ai/ai_pr.py'
 alias ai-create-pr='python3 <path/to/your/repo>/ai/ai_create_pr.py'
@@ -98,6 +101,7 @@ source ~/.zshrc
 ## Make scripts executable
 
 ```bash
+chmod +x ai/ai_go.py
 chmod +x ai/ai_start.py
 chmod +x ai/ai_pr.py
 chmod +x ai/ai_create_pr.py
@@ -132,13 +136,23 @@ ai-list --mine               # Assigned to me
 
 ## Start Work
 
+**`ai-go`** — Full flow with safety checks (recommended):
+
+```bash
+ai-go                        # Pull, pick issue, branch, copy prompt, open Cursor
+ai-go --no-pull              # Skip git pull --rebase
+ai-go --set-in-progress      # Also set Linear status to In Progress
+```
+
+**`ai-start`** — Lighter alternative with prompt selection:
+
 ```bash
 ai-start                     # Default: cursor_velocity prompt
 ai-start --prompt bugfix     # Use cursor_bugfix for this issue
 ai-start --prompt refactor   # Use cursor_refactor_safe
 ```
 
-This will:
+Both will:
 - Fetch Linear issues in Ready for build
 - Let you choose one
 - Create a branch: lin-123-short-title
@@ -223,7 +237,7 @@ ai-prompt warp_velocity      # Copy warp_velocity (for Warp)
 Your practical loop:
 
 1. Warp → planning
-2. `ai-start` → coding
+2. `ai-go` or `ai-start` → coding
 3. Cursor → implement
 4. `ai-pr` → PR
 5. Merge

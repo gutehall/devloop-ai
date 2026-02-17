@@ -48,4 +48,16 @@ Use these in Cursor to guide the AI agent during implementation.
 
 - **Warp:** Paste prompt content into Warp chat when planning. Use `warp_velocity.md` or `warp_mode_structured.md` for the main planning loop.
 - **Cursor:** Drop prompt content into Cursor chat, or save under `/prompts/cursor/`. Prefer snippets or text expansion for speed.
-- **Flow:** Plan in Warp → create Linear issues → use `ai-start` → implement in Cursor with the appropriate prompt.
+- **Flow:** Plan in Warp → create Linear issues → use `ai-go` or `ai-start` → implement in Cursor with the appropriate prompt.
+
+---
+
+## CLI Integration
+
+| Script | Prompts used |
+|--------|--------------|
+| `ai-go` | Uses built-in velocity prompt + Linear issue (URL, title, description). No prompt selection. |
+| `ai-start` | Loads from `cursor_<name>.md` via `--prompt` (e.g. `ai-start --prompt bugfix`). Default: velocity. |
+| `ai-prompt` | Copies any prompt to clipboard for manual use in Warp or Cursor. |
+
+**`ai-go`** is the full-flow option: ensures clean worktree, runs `git pull --rebase`, picks issue, creates branch, copies prompt+issue (with Linear URL), opens Cursor. Optional `--set-in-progress` updates Linear status.
