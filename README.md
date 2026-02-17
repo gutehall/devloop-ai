@@ -35,7 +35,7 @@ Linear auto-updates
 # Repository Structure
 
 ```
-tools/ai/
+ai/
   ai_start.py     # Pick issue → create branch → open Cursor
   ai_pr.py        # Generate PR description
   ai_status.py    # Update Linear issue status (optional)
@@ -55,7 +55,8 @@ docs/
 ## Create tools folder
 
 ```bash
-mkdir -p tools/ai
+git clone https://github.com/gutehall/devloop-ai.git
+cd devloop-ai
 ```
 
 ## Add environment variables
@@ -65,6 +66,14 @@ Add to your `~/.zshrc`:
 ```bash
 export LINEAR_API_KEY="YOUR_LINEAR_API_KEY"
 export LINEAR_READY_STATE="Ready for build"
+```
+
+Add aliases:
+
+```bash
+alias ai-start='python3 <path/to/your/repo>/ai/ai_start.py'
+alias ai-pr='python3 <path/to/your/repo>/ai/ai_pr.py'
+alias ai-status='python3 <path/to/your/repo>/ai/ai_status.py'
 ```
 
 Reload:
@@ -81,20 +90,6 @@ source ~/.zshrc
 chmod +x tools/ai/ai_start.py
 chmod +x tools/ai/ai_pr.py
 chmod +x tools/ai/ai_status.py
-```
-
-Add aliases:
-
-```bash
-alias ai-start='python3 tools/ai/ai_start.py'
-alias ai-pr='python3 tools/ai/ai_pr.py'
-alias ai-status='python3 tools/ai/ai_status.py'
-```
-
-Reload:
-
-```bash
-source ~/.zshrc
 ```
 
 ---
