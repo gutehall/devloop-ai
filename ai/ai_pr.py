@@ -6,6 +6,8 @@ import sys
 import json
 import urllib.request
 
+from platform_utils import copy_to_clipboard
+
 API = os.environ.get("LINEAR_API_KEY")
 if not API:
     sys.exit("Missing LINEAR_API_KEY")
@@ -86,7 +88,8 @@ Closes {issue['identifier']}
 _None_
 """
 
-p = subprocess.Popen(["pbcopy"], stdin=subprocess.PIPE)
-p.communicate(body.encode("utf-8"))
-
-print("PR description copied to clipboard.")
+if copy_to_clipboard(body):
+    print("PR description copied to clipboard.")
+else:
+    print("Could not copy to clipboard. Paste manually:")
+    print(body[:300] + "..." if len(body) > 300 else body)

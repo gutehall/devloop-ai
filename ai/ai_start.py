@@ -7,6 +7,8 @@ import subprocess
 import sys
 import urllib.request
 
+from platform_utils import copy_to_clipboard, open_cursor
+
 API = os.environ.get("LINEAR_API_KEY")
 READY_STATE = os.environ.get("LINEAR_READY_STATE", "Ready for build")
 PROMPT_DIR = os.path.join(os.path.dirname(__file__), "..", "prompt")
@@ -107,10 +109,12 @@ branch = f"{issue['identifier'].lower()}-{slug(issue['title'])}"
 subprocess.check_call(["git", "checkout", "-b", branch])
 
 payload = f"{prompt_text}\n\nTitle: {issue['title']}\n\n{issue.get('description','')}"
-p = subprocess.Popen(["pbcopy"], stdin=subprocess.PIPE)
-p.communicate(payload.encode("utf-8"))
+if copy_to_clipboard(payload):
+    print("Prompt copied to clipboard.")
+else:
+    print("Could not copy to clipboard. Paste manually:")
+    print(payload[:200] + "..." if len(payload) > 200 else payload)
 
-subprocess.Popen(["open", "-a", "Cursor", "."])
+open_cursor(".")
 
 print("Branch created:", branch)
-print("Prompt copied to clipboard.")

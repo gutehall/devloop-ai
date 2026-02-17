@@ -1,5 +1,5 @@
 # Devloop AI  
-### Warp → Linear → Cursor Automation (macOS + GitHub)
+### Warp → Linear → Cursor Automation (macOS, Linux, Windows + GitHub)
 
 An AI-driven development loop designed for high velocity and minimal manual overhead.
 
@@ -36,6 +36,7 @@ Linear auto-updates
 
 ```
 ai/
+  platform_utils.py  # Cross-platform clipboard and Cursor launch
   ai_go.py        # Full start flow: pull, pick issue, branch, open Cursor, optional status update
   ai_start.py     # Pick issue → create branch → open Cursor
   ai_pr.py        # Generate PR description
@@ -64,11 +65,26 @@ docs/
 ```bash
 git clone https://github.com/gutehall/devloop-ai.git
 cd devloop-ai
+pip install -r requirements.txt
 ```
+
+## Platform setup
+
+**macOS:** No extra setup. Clipboard and Cursor work out of the box.
+
+**Linux:** Install a clipboard tool for copy/paste:
+```bash
+sudo apt install xclip    # Debian/Ubuntu
+# or: sudo apt install xsel
+# Wayland: sudo apt install wl-clipboard
+```
+Install Cursor's shell command: In Cursor, press `Ctrl+Shift+P` → "Shell Command: Install 'cursor' command in PATH".
+
+**Windows:** Install Cursor's shell command: In Cursor, press `Ctrl+Shift+P` → "Shell Command: Install 'cursor' command in PATH". Clipboard works via pyperclip (no extra install).
 
 ## Add environment variables
 
-Add to your `~/.zshrc`:
+**macOS / Linux:** Add to `~/.zshrc` or `~/.bashrc`:
 
 ```bash
 export LINEAR_API_KEY="YOUR_LINEAR_API_KEY"
@@ -90,15 +106,17 @@ alias ai-status='python3 <path/to/your/repo>/ai/ai_status.py'
 alias ai-done='python3 <path/to/your/repo>/ai/ai_done.py'
 ```
 
-Reload:
+**Windows:** Add to PowerShell profile or set in System Environment Variables.
+
+Reload (macOS/Linux):
 
 ```bash
-source ~/.zshrc
+source ~/.zshrc   # or source ~/.bashrc
 ```
 
 ---
 
-## Make scripts executable
+## Make scripts executable (macOS/Linux)
 
 ```bash
 chmod +x ai/ai_go.py
@@ -160,7 +178,7 @@ Both will:
 - Open Cursor
 
 Then:
-- Paste into Cursor (⌘V)
+- Paste into Cursor (Ctrl+V on Windows/Linux, Cmd+V on macOS)
 - Implement
 
 ---
@@ -222,13 +240,15 @@ ai-prompt warp_velocity      # Copy warp_velocity (for Warp)
 
 # Requirements
 
-- macOS
+- macOS, Linux, or Windows
 - Python 3
 - Git
-- Cursor installed
+- Cursor installed (with shell command in PATH)
 - Linear API key
 - GitHub repository
 - GitHub CLI (`gh`) — for `ai-create-pr`
+- `pyperclip` — `pip install -r requirements.txt`
+- **Linux only:** `xclip` or `xsel` (X11) or `wl-clipboard` (Wayland) for clipboard
 
 ---
 

@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Copy a prompt to clipboard. List prompts if no name given."""
 import os
-import subprocess
 import sys
+
+from platform_utils import copy_to_clipboard
 
 PROMPT_DIR = os.path.join(os.path.dirname(__file__), "..", "prompt")
 
@@ -55,9 +56,11 @@ def main():
     with open(path, "r") as f:
         content = f.read()
 
-    p = subprocess.Popen(["pbcopy"], stdin=subprocess.PIPE)
-    p.communicate(content.encode("utf-8"))
-    print(f"Copied {match}.md to clipboard.")
+    if copy_to_clipboard(content):
+        print(f"Copied {match}.md to clipboard.")
+    else:
+        print("Could not copy to clipboard. Content:")
+        print(content[:300] + "..." if len(content) > 300 else content)
 
 
 if __name__ == "__main__":

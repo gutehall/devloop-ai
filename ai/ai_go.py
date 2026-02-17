@@ -7,6 +7,8 @@ import subprocess
 import sys
 import urllib.request
 
+from platform_utils import copy_to_clipboard, open_cursor as _open_cursor
+
 API = os.environ.get("LINEAR_API_KEY")
 READY_STATE = os.environ.get("LINEAR_READY_STATE", "Ready for build")
 IN_PROGRESS_STATE = os.environ.get("LINEAR_IN_PROGRESS_STATE", "In Progress")
@@ -53,10 +55,6 @@ def run(cmd: list[str]) -> None:
 
 def popen(cmd: list[str]) -> None:
     subprocess.Popen(cmd)
-
-def pbcopy(text: str) -> None:
-    p = subprocess.Popen(["pbcopy"], stdin=subprocess.PIPE)
-    p.communicate(text.encode("utf-8"))
 
 def gql(query: str, variables=None) -> dict:
     req = urllib.request.Request(
@@ -127,10 +125,12 @@ URL: {issue['url']}
 Description:
 {issue.get('description') or "(no description)"}
 """
-    pbcopy(payload)
+    if not copy_to_clipboard(payload):
+        print("Could not copy to clipboard. Paste manually:")
+        print(payload[:200] + "..." if len(payload) > 200 else payload)
 
 def open_cursor():
-    popen(["open", "-a", "Cursor", "."])
+    _open_cursor(".")
 
 def set_issue_state(issue, target_state_name: str):
     # Find state id by name for the issue's team
@@ -211,7 +211,7 @@ def main():
 
     print("\n✅ Done")
     print(f"Branch: {branch}")
-    print("Next: In Cursor chat, paste (⌘V) and start implementing.")
+    print("Next: In Cursor chat, paste (Ctrl+V / Cmd+V) and start implementing.")
 
 if __name__ == "__main__":
     main()
