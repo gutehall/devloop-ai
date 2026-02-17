@@ -43,6 +43,7 @@ ai/
 prompts/
   warp_velocity.md
   cursor_velocity.md
+  warp_mode_structured.md
 
 docs/
   workflow.md
@@ -87,9 +88,9 @@ source ~/.zshrc
 ## Make scripts executable
 
 ```bash
-chmod +x tools/ai/ai_start.py
-chmod +x tools/ai/ai_pr.py
-chmod +x tools/ai/ai_status.py
+chmod +x ai/ai_start.py
+chmod +x ai/ai_pr.py
+chmod +x ai/ai_status.py
 ```
 
 ---
