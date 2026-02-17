@@ -14,6 +14,7 @@ This repository provides lightweight CLI scripts and prompt templates to orchest
 
 # Architecture
 
+```
 Warp (Planning)
       ↓
 Linear (Structure)
@@ -27,11 +28,13 @@ ai-pr (CLI)
 GitHub PR
       ↓
 Linear auto-updates
+```
 
 ---
 
 # Repository Structure
 
+```
 tools/ai/
   ai_start.py     # Pick issue → create branch → open Cursor
   ai_pr.py        # Generate PR description
@@ -43,6 +46,7 @@ prompts/
 
 docs/
   workflow.md
+```
 
 ---
 
@@ -50,36 +54,48 @@ docs/
 
 ## Create tools folder
 
+```bash
 mkdir -p tools/ai
+```
 
 ## Add environment variables
 
-Add to your ~/.zshrc:
+Add to your `~/.zshrc`:
 
+```bash
 export LINEAR_API_KEY="YOUR_LINEAR_API_KEY"
 export LINEAR_READY_STATE="Ready for build"
+```
 
 Reload:
 
+```bash
 source ~/.zshrc
+```
 
 ---
 
 ## Make scripts executable
 
+```bash
 chmod +x tools/ai/ai_start.py
 chmod +x tools/ai/ai_pr.py
 chmod +x tools/ai/ai_status.py
+```
 
 Add aliases:
 
+```bash
 alias ai-start='python3 tools/ai/ai_start.py'
 alias ai-pr='python3 tools/ai/ai_pr.py'
 alias ai-status='python3 tools/ai/ai_status.py'
+```
 
 Reload:
 
+```bash
 source ~/.zshrc
+```
 
 ---
 
@@ -87,19 +103,20 @@ source ~/.zshrc
 
 ## Plan in Warp
 
-Use prompts/warp_velocity.md to:
+Use `prompts/warp_velocity.md` to:
 - Analyze the repo
 - Decide project vs single issue
 - Create Linear issues (status: Planned)
 
-Move ready work to:
-Ready for build
+Move ready work to **Ready for build**.
 
 ---
 
 ## Start Work
 
+```bash
 ai-start
+```
 
 This will:
 - Fetch Linear issues in Ready for build
@@ -116,7 +133,9 @@ Then:
 
 ## Create PR
 
+```bash
 ai-pr
+```
 
 This will:
 - Read current branch
@@ -133,16 +152,17 @@ Then:
 
 ## Status Handling
 
-Preferred:
-GitHub ↔ Linear integration automatically moves:
+**Preferred:** GitHub ↔ Linear integration automatically moves:
 - PR opened → In Review
 - PR merged → Done
 
-Optional manual update:
+**Optional manual update:**
 
+```bash
 ai-status LIN-123 "In Progress"
 ai-status LIN-123 "In Review"
 ai-status LIN-123 Done
+```
 
 ---
 
@@ -172,9 +192,9 @@ ai-status LIN-123 Done
 Your practical loop:
 
 1. Warp → planning
-2. ai-start → coding
+2. `ai-start` → coding
 3. Cursor → implement
-4. ai-pr → PR
+4. `ai-pr` → PR
 5. Merge
 
 Linear becomes backend infrastructure — not your daily workspace.
