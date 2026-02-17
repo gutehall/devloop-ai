@@ -38,12 +38,17 @@ Linear auto-updates
 ai/
   ai_start.py     # Pick issue → create branch → open Cursor
   ai_pr.py        # Generate PR description
+  ai_create_pr.py # Create PR via GitHub CLI
+  ai_list.py      # List Linear issues
+  ai_prompt.py    # Copy prompt to clipboard
   ai_status.py    # Update Linear issue status (optional)
+  ai_done.py      # Mark current issue Done
 
-prompts/
+prompt/
   warp_velocity.md
   cursor_velocity.md
   warp_mode_structured.md
+  ... (see prompt/README.md)
 
 docs/
   workflow.md
@@ -67,6 +72,7 @@ Add to your `~/.zshrc`:
 ```bash
 export LINEAR_API_KEY="YOUR_LINEAR_API_KEY"
 export LINEAR_READY_STATE="Ready for build"
+# Optional: LINEAR_MAIN_BRANCH=origin/main  (default: origin/main or git config)
 ```
 
 Add aliases:
@@ -74,7 +80,11 @@ Add aliases:
 ```bash
 alias ai-start='python3 <path/to/your/repo>/ai/ai_start.py'
 alias ai-pr='python3 <path/to/your/repo>/ai/ai_pr.py'
+alias ai-create-pr='python3 <path/to/your/repo>/ai/ai_create_pr.py'
+alias ai-list='python3 <path/to/your/repo>/ai/ai_list.py'
+alias ai-prompt='python3 <path/to/your/repo>/ai/ai_prompt.py'
 alias ai-status='python3 <path/to/your/repo>/ai/ai_status.py'
+alias ai-done='python3 <path/to/your/repo>/ai/ai_done.py'
 ```
 
 Reload:
@@ -90,7 +100,11 @@ source ~/.zshrc
 ```bash
 chmod +x ai/ai_start.py
 chmod +x ai/ai_pr.py
+chmod +x ai/ai_create_pr.py
+chmod +x ai/ai_list.py
+chmod +x ai/ai_prompt.py
 chmod +x ai/ai_status.py
+chmod +x ai/ai_done.py
 ```
 
 ---
@@ -99,19 +113,29 @@ chmod +x ai/ai_status.py
 
 ## Plan in Warp
 
-Use `prompts/warp_velocity.md` to:
+Use `prompt/warp_velocity.md` to:
 - Analyze the repo
 - Decide project vs single issue
 - Create Linear issues (status: Planned)
 
 Move ready work to **Ready for build**.
 
+**Quick issue overview:**
+
+```bash
+ai-list                      # Issues in Ready for build
+ai-list --state "Planned"    # Filter by state
+ai-list --mine               # Assigned to me
+```
+
 ---
 
 ## Start Work
 
 ```bash
-ai-start
+ai-start                     # Default: cursor_velocity prompt
+ai-start --prompt bugfix     # Use cursor_bugfix for this issue
+ai-start --prompt refactor   # Use cursor_refactor_safe
 ```
 
 This will:
@@ -130,19 +154,19 @@ Then:
 ## Create PR
 
 ```bash
-ai-pr
+ai-pr                        # Generate description, copy to clipboard
+ai-create-pr                 # Create PR via GitHub CLI (uses clipboard)
+ai-pr && ai-create-pr        # Generate and create in one go
 ```
 
-This will:
+`ai-pr` will:
 - Read current branch
 - Extract issue key
 - Fetch issue title
-- Generate PR description
+- Generate PR description (richer template)
 - Copy to clipboard
 
-Then:
-- Create PR in GitHub
-- Paste description
+`ai-create-pr` creates the PR via `gh` (requires [GitHub CLI](https://cli.github.com/)). If clipboard is empty, it runs `ai-pr` first.
 
 ---
 
@@ -158,6 +182,16 @@ Then:
 ai-status LIN-123 "In Progress"
 ai-status LIN-123 "In Review"
 ai-status LIN-123 Done
+ai-done                      # Mark current branch's issue Done (after merge)
+```
+
+**Copy prompts to clipboard:**
+
+```bash
+ai-prompt                    # List available prompts
+ai-prompt velocity           # Copy cursor_velocity
+ai-prompt bugfix             # Copy cursor_bugfix
+ai-prompt warp_velocity      # Copy warp_velocity (for Warp)
 ```
 
 ---
@@ -180,6 +214,7 @@ ai-status LIN-123 Done
 - Cursor installed
 - Linear API key
 - GitHub repository
+- GitHub CLI (`gh`) — for `ai-create-pr`
 
 ---
 

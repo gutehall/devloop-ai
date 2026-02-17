@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
-import json, os, re, subprocess, sys, urllib.request
+import argparse
+import json
+import os
+import re
+import subprocess
+import sys
+import urllib.request
 
 API = os.environ.get("LINEAR_API_KEY")
 READY_STATE = os.environ.get("LINEAR_READY_STATE", "Ready for build")
-
-if not API:
-    print("Missing LINEAR_API_KEY env var")
-    sys.exit(1)
+PROMPT_DIR = os.path.join(os.path.dirname(__file__), "..", "prompt")
 
 CURSOR_FAST_PROMPT = """You are implementing this issue.
 
@@ -21,6 +24,17 @@ Rules:
 - Prefer simple solutions over clever ones.
 - Stop if scope expands.
 """
+
+
+def load_prompt(name: str) -> str | None:
+    """Load prompt from file. Tries cursor_<name>.md then <name>.md."""
+    for candidate in (f"cursor_{name}", name):
+        path = os.path.join(PROMPT_DIR, f"{candidate}.md")
+        if os.path.isfile(path):
+            with open(path) as f:
+                return f.read()
+    return None
+
 
 def gql(query, variables=None):
     req = urllib.request.Request(
@@ -38,6 +52,24 @@ def slug(s):
     s = s.lower()
     s = re.sub(r"[^a-z0-9]+", "-", s).strip("-")
     return s[:40]
+
+
+# Parse args
+parser = argparse.ArgumentParser(description="Pick issue, create branch, open Cursor")
+parser.add_argument("--prompt", help="Prompt mode (e.g. velocity, bugfix, refactor)")
+args = parser.parse_args()
+
+prompt_text = CURSOR_FAST_PROMPT
+if args.prompt:
+    loaded = load_prompt(args.prompt)
+    if loaded:
+        prompt_text = loaded
+    else:
+        print(f"Prompt '{args.prompt}' not found, using default.")
+
+if not API:
+    print("Missing LINEAR_API_KEY env var")
+    sys.exit(1)
 
 query = """
 query Issues($filter: IssueFilter) {
@@ -74,7 +106,7 @@ issue = issues[int(choice) - 1]
 branch = f"{issue['identifier'].lower()}-{slug(issue['title'])}"
 subprocess.check_call(["git", "checkout", "-b", branch])
 
-payload = f"{CURSOR_FAST_PROMPT}\n\nTitle: {issue['title']}\n\n{issue.get('description','')}"
+payload = f"{prompt_text}\n\nTitle: {issue['title']}\n\n{issue.get('description','')}"
 p = subprocess.Popen(["pbcopy"], stdin=subprocess.PIPE)
 p.communicate(payload.encode("utf-8"))
 

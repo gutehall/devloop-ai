@@ -1,9 +1,32 @@
 #!/usr/bin/env python3
-import os, re, subprocess, sys, json, urllib.request
+import os
+import re
+import subprocess
+import sys
+import json
+import urllib.request
 
 API = os.environ.get("LINEAR_API_KEY")
 if not API:
     sys.exit("Missing LINEAR_API_KEY")
+
+
+def get_base_branch() -> str:
+    """Get base branch for diff (origin/main, origin/master, or LINEAR_MAIN_BRANCH)."""
+    if base := os.environ.get("LINEAR_MAIN_BRANCH"):
+        return base
+    try:
+        default = subprocess.check_output(
+            ["git", "config", "--get", "init.defaultBranch"],
+            stderr=subprocess.DEVNULL,
+            text=True,
+        ).strip()
+        if default:
+            return f"origin/{default}"
+    except subprocess.CalledProcessError:
+        pass
+    return "origin/main"
+
 
 def gql(query, variables=None):
     req = urllib.request.Request(
@@ -38,17 +61,29 @@ query Issue($identifier: String!) {
 
 issue = gql(query, {"identifier": issue_key})["data"]["issue"]
 
+base = get_base_branch()
 diffstat = subprocess.check_output(
-    ["git", "diff", "--stat", "origin/main...HEAD"]
+    ["git", "diff", "--stat", f"{base}...HEAD"]
 ).decode()
 
 body = f"""## Summary
 Implements {issue['identifier']}: {issue['title']}
 
-## Changes
+## What changed
 {diffstat}
 
+## Why
+{issue['title']}
+
+## Testing & Validation
+- [ ] Run tests locally
+- [ ] CI passes
+
+## Linked issues
 Closes {issue['identifier']}
+
+## Known limitations & risks
+_None_
 """
 
 p = subprocess.Popen(["pbcopy"], stdin=subprocess.PIPE)
