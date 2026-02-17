@@ -1,31 +1,23 @@
-# Cursor Velocity Prompt (Implementation)
+# Cursor Velocity Mode
 
-You are implementing this issue.
+You are implementing a task in Velocity Mode.
 
-## Primary goal
-Deliver a minimal working solution that satisfies the acceptance criteria.
+Primary goal:
+Deliver a minimal working solution that satisfies the acceptance criteria quickly.
 
-## Rules
+Rules:
 - Do not refactor unrelated code.
-- Do not redesign architecture.
-- Keep changes small, scoped, and reversible.
-- Follow existing patterns and conventions.
-- Prefer simple solutions over clever ones.
-- Stop if scope expands or requirements are unclear.
+- Keep changes small and focused (1–2 days per issue).
+- Follow existing patterns & conventions.
+- Add tests that cover the main happy path and key edge cases.
+- Ensure CI passes before marking done.
+- If scope expands, stop and request clarification.
 
-## Execution steps
-1. Read relevant files before coding.
-2. Implement the minimal solution.
+Execution steps:
+1. Read the issue and relevant files.
+2. Implement minimal solution.
 3. Add/update tests.
-4. Ensure CI passes.
-5. Re-check acceptance criteria before finishing.
+4. Run local tests and linters.
+5. Ensure CI will pass, then create PR.
 
-## If ambiguity exists
-- Make the safest reasonable assumption.
-- Document the assumption briefly (comment or PR description).
-- If the assumption changes expected behavior, stop and ask.
-
-## Do not
-- Introduce new abstractions unless required.
-- Change public APIs unless explicitly required.
-- Perform speculative “cleanup” or “improvements”.
+If ambiguous, make the safest reasonable assumption and document it in a short comment or the PR description.
