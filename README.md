@@ -1,5 +1,5 @@
 # Devloop AI  
-### Warp → Linear → Cursor Automation (macOS, Linux, Windows + GitHub)
+### Warp → Linear → Cursor Automation
 
 An AI-driven development loop designed for high velocity and minimal manual overhead.
 
@@ -28,32 +28,6 @@ ai-pr (CLI)
 GitHub PR
       ↓
 Linear auto-updates
-```
-
----
-
-# Repository Structure
-
-```
-ai/
-  platform_utils.py  # Cross-platform clipboard and Cursor launch
-  ai_go.py        # Full start flow: pull, pick issue, branch, open Cursor, optional status update
-  ai_start.py     # Pick issue → create branch → open Cursor
-  ai_pr.py        # Generate PR description
-  ai_create_pr.py # Create PR via GitHub CLI
-  ai_list.py      # List Linear issues
-  ai_prompt.py    # Copy prompt to clipboard
-  ai_status.py    # Update Linear issue status (optional)
-  ai_done.py      # Mark current issue Done
-
-prompt/
-  warp_velocity.md
-  cursor_velocity.md
-  warp_mode_structured.md
-  ... (see prompt/README.md)
-
-docs/
-  workflow.md
 ```
 
 ---
