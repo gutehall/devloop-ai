@@ -78,6 +78,7 @@ alias ai-list='python3 <path/to/your/repo>/ai/ai_list.py'
 alias ai-prompt='python3 <path/to/your/repo>/ai/ai_prompt.py'
 alias ai-status='python3 <path/to/your/repo>/ai/ai_status.py'
 alias ai-done='python3 <path/to/your/repo>/ai/ai_done.py'
+alias ws-create='python3 <path/to/your/repo>/ai/ws_create.py'
 ```
 
 ```bash
