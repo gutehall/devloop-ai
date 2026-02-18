@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 import argparse
+import os
 import subprocess
 import sys
 from pathlib import Path
 
-PROMPTS_DIR_DEFAULT = "prompts"
+PROMPTS_DIR_DEFAULT = "prompt"
 ORCH_PROMPT_FILE = "warp_orchestrator.md"
 
 def pbcopy(text: str) -> None:
@@ -34,13 +35,11 @@ def extract_json_block(text: str) -> str | None:
     return text[start:end].strip()
 
 def run_ai_linear_create(json_text: str) -> int:
-    """
-    Calls ai-linear-create by piping JSON to it.
-    Assumes you have: alias ai-linear-create='python3 tools/ai/ai_linear_create.py'
-    BUT aliases don't apply in subprocess, so we call the script directly.
-    """
-    cmd = [sys.executable, "tools/ai/ai_linear_create.py"]
-    p = subprocess.Popen(cmd, stdin=subprocess.PIPE)
+    """Calls ai-linear-create by piping JSON to it."""
+    ai_dir = os.path.dirname(os.path.abspath(__file__))
+    cmd = [sys.executable, os.path.join(ai_dir, "ai_linear_create.py")]
+    env = os.environ.copy()
+    p = subprocess.Popen(cmd, stdin=subprocess.PIPE, env=env)
     p.communicate(json_text.encode("utf-8"))
     return p.returncode
 

@@ -1,9 +1,19 @@
 #!/usr/bin/env python3
 import json
 import os
+import re
 import sys
 import subprocess
 import urllib.request
+
+try:
+    from platform_utils import paste_from_clipboard
+except ImportError:
+    def paste_from_clipboard() -> str:
+        try:
+            return subprocess.check_output(["pbpaste"]).decode("utf-8", errors="replace")
+        except Exception:
+            return ""
 
 API = os.environ.get("LINEAR_API_KEY")
 if not API:
@@ -13,11 +23,95 @@ if not API:
 DEFAULT_TEAM_ID = os.environ.get("LINEAR_TEAM_ID")
 DEFAULT_TEAM_NAME = os.environ.get("LINEAR_TEAM_NAME")
 
-def pbpaste() -> str:
+
+def linear_cli_available() -> bool:
+    """Check if linear-cli (schpet/linear-cli) is installed."""
     try:
-        return subprocess.check_output(["pbpaste"]).decode("utf-8", errors="replace")
-    except Exception:
-        return ""
+        subprocess.run(["linear", "--version"], capture_output=True, check=True)
+        return True
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return False
+
+
+def resolve_team_key(team_id: str) -> str | None:
+    """Get team key (e.g. ENG) for linear-cli. team_id may be UUID or key."""
+    # If short uppercase (e.g. ENG), likely already a key
+    if len(team_id) <= 10 and team_id.isupper() and "-" not in team_id:
+        return team_id
+    q = """
+    query Team($id: String!) {
+      team(id: $id) { key }
+    }
+    """
+    resp = gql(q, {"id": team_id})
+    if gql_ok(resp):
+        return resp.get("data", {}).get("team", {}).get("key")
+    return None
+
+
+def create_issue_via_linear_cli(
+    issue: dict,
+    team_key: str,
+    project_name: str | None,
+) -> dict | None:
+    """Create issue via linear-cli. Returns {identifier, title, url} or None."""
+    title = issue.get("title")
+    if not title:
+        return None
+
+    description = issue.get("description") or ""
+    priority = issue.get("priority")
+    labels = issue.get("labels") or []
+    deps = issue.get("dependencies") or []
+    complexity = issue.get("complexity")
+
+    if deps:
+        description = f"{description}\n\n---\nDependencies:\n- " + "\n- ".join(deps)
+    if complexity is not None:
+        description = f"{description}\n\n---\nComplexity: {complexity}"
+    description = description.strip()
+
+    cmd = [
+        "linear", "issue", "create",
+        "-t", title,
+        "--team", team_key,
+        "--no-interactive",
+    ]
+    if description:
+        cmd.extend(["-d", description])
+    if priority is not None:
+        cmd.extend(["--priority", str(int(priority))])
+    for lbl in labels:
+        if lbl:
+            cmd.extend(["--label", str(lbl).strip()])
+    if project_name:
+        cmd.extend(["--project", project_name])
+
+    env = {**os.environ}
+    if API:
+        env["LINEAR_API_KEY"] = API
+
+    try:
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+        if result.returncode != 0:
+            print(f"linear-cli error: {result.stderr or result.stdout}")
+            return None
+
+        # Parse URL from output: https://linear.app/.../issue/TEAM-123/...
+        url_match = re.search(r"https://linear\.app/[^\s]+", result.stdout)
+        url = url_match.group(0) if url_match else ""
+        ident_match = re.search(r"([A-Z]+-\d+)", result.stdout)
+        identifier = ident_match.group(1) if ident_match else ""
+
+        return {"identifier": identifier, "title": title, "url": url}
+    except Exception as e:
+        print(f"linear-cli failed: {e}")
+        return None
 
 def gql(query: str, variables=None) -> dict:
     req = urllib.request.Request(
@@ -43,7 +137,7 @@ def load_input_json() -> dict:
     if not sys.stdin.isatty():
         raw = sys.stdin.read()
     else:
-        raw = pbpaste()
+        raw = paste_from_clipboard()
 
     raw = raw.strip()
     if not raw:
@@ -329,11 +423,22 @@ def main():
             print("⚠️ Project creation failed; continuing to create issues without project.")
 
     project_id = created_project.get("id") if created_project else None
+    project_name = created_project.get("name") if created_project else None
 
-    print("\n→ Creating issues…")
+    use_linear_cli = linear_cli_available()
+    if use_linear_cli:
+        team_key = resolve_team_key(team_id)
+        if not team_key:
+            print("Could not resolve team key for linear-cli; falling back to GraphQL.")
+            use_linear_cli = False
+
+    print("\n→ Creating issues…" + (" (via linear-cli)" if use_linear_cli else ""))
     created_issues = []
     for i, iss in enumerate(issues, 1):
-        created = create_issue(team_id, iss, label_map, project_id)
+        if use_linear_cli:
+            created = create_issue_via_linear_cli(iss, team_key, project_name)
+        else:
+            created = create_issue(team_id, iss, label_map, project_id)
         if created:
             created_issues.append(created)
             print(f"✅ {i}. {created.get('identifier')} — {created.get('title')}")

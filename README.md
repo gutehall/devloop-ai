@@ -65,6 +65,7 @@ export LINEAR_API_KEY="YOUR_LINEAR_API_KEY"
 export LINEAR_READY_STATE="Ready for build"
 # Optional: LINEAR_MAIN_BRANCH=origin/main  (default: origin/main or git config)
 # Optional: LINEAR_IN_PROGRESS_STATE="In Progress"  (for ai-go --set-in-progress)
+# Optional: LINEAR_TEAM_ID=ENG or LINEAR_TEAM_NAME="Team Name"  (for ai-linear-create / ws-create)
 ```
 
 Add aliases:
@@ -113,6 +114,7 @@ chmod +x ai/ai_list.py
 chmod +x ai/ai_prompt.py
 chmod +x ai/ai_status.py
 chmod +x ai/ai_done.py
+chmod +x ai/ws_create.py
 ```
 
 ---
@@ -127,6 +129,17 @@ Use `prompt/warp_velocity.md` to:
 - Create Linear issues (status: Planned)
 
 Move ready work to **Ready for build**.
+
+**`ws-create`** — Automated Warp → Linear flow:
+
+```bash
+ws-create "Add user authentication flow"   # Task as argument
+ws-create                                 # Prompts for task interactively
+ws-create --no-open-warp "Refactor API"   # Skip opening Warp
+ws-create --commit-only                   # JSON already in clipboard
+```
+
+Flow: copies `warp_orchestrator` + your task to clipboard, opens Warp, you paste and run the prompt. Warp outputs a JSON block; copy it, press Enter, and the script creates the project and issues in Linear via `ai-linear-create`. With `--commit-only`, skips planning and creates from clipboard JSON directly.
 
 **Quick issue overview:**
 
@@ -235,6 +248,7 @@ ai-prompt warp_velocity      # Copy warp_velocity (for Warp)
 - GitHub CLI (`gh`) — for `ai-create-pr`
 - `pyperclip` — `pip install -r requirements.txt`
 - **Linux only:** `xclip` or `xsel` (X11) or `wl-clipboard` (Wayland) for clipboard
+- **Optional:** [linear-cli](https://github.com/schpet/linear-cli) — for `ai-linear-create` / `ws-create` (uses `LINEAR_API_KEY` from env)
 
 ---
 
