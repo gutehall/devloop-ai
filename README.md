@@ -106,6 +106,17 @@ alias ai-status='python3 <path/to/your/repo>/ai/ai_status.py'
 alias ai-done='python3 <path/to/your/repo>/ai/ai_done.py'
 ```
 
+```bash
+# Warp quick commands
+
+wv() { cat <path/to/your/repo>/prompt/warp_velocity.md | pbcopy && echo "✓ warp_velocity copied"; }
+wo() { cat <path/to/your/repo>/prompt/warp_orchestrator.md | pbcopy && echo "✓ warp_orchestrator copied"; }
+wr() { cat <path/to/your/repo>/prompt/warp_review.md | pbcopy && echo "✓ warp_review copied"; }
+wd() { cat <path/to/your/repo>/prompt/warp_debug.md | pbcopy && echo "✓ warp_debug copied"; }
+wa() { cat <path/to/your/repo>/prompt/warp_architecture.md | pbcopy && echo "✓ warp_architecture copied"; }
+# Add more prompts if needed...
+```
+
 **Windows:** Add to PowerShell profile or set in System Environment Variables.
 
 Reload (macOS/Linux):
