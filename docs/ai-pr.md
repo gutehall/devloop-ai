@@ -1,22 +1,25 @@
 # ai-pr
 
-Generate PR description from current branch and copy to clipboard.
+Stage, commit, push, then generate PR description from current branch and copy to clipboard.
 
 ## Purpose
 
-Reads the current git branch, extracts the Linear issue key (e.g. lin-123), fetches the issue title from Linear, generates a PR body with summary, diffstat, testing steps, and linked issue, then copies it to clipboard.
+Runs `git add -A`, `git commit` (with issue key and title as message), and `git push`. Then reads the current git branch, extracts the Linear issue key (e.g. lin-123), fetches the issue title from Linear, generates a PR body with summary, diffstat, testing steps, and linked issue, and copies it to clipboard.
 
 ## Usage
 
 ```bash
-ai-pr
+ai-pr                    # Use issue key from branch name (e.g. lin-123-add-feature)
+ai-pr --issue FIN-587    # Override: use this issue key instead
 ```
 
-Must be run from a branch whose name contains an issue key (e.g. `lin-123-add-feature`).
+Either the branch name must contain an issue key, or use `--issue` to specify it.
 
 ## Arguments
 
-None.
+| Option | Description |
+|--------|-------------|
+| `--issue <key>` | Override: use this issue key (e.g. FIN-587) instead of extracting from branch |
 
 ## Environment Variables
 
@@ -44,7 +47,7 @@ PR body includes:
 
 ## Workflow Context
 
-Run after implementing an issue. Then either:
+Run after implementing an issue. `ai-pr` stages all changes, commits with `{ISSUE}: {title}`, and pushes. Then either:
 
 - Paste into GitHub when creating a PR manually, or
 - Run `ai-create-pr` to create the PR via gh CLI

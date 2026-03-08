@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
+import argparse
+import json
 import os
 import re
 import subprocess
 import sys
-import json
 import urllib.error
 import urllib.request
 
@@ -50,28 +51,52 @@ def gql(query, variables=None):
         body = e.read().decode("utf-8") if e.fp else str(e)
         sys.exit(f"Linear API error {e.code}: {body}")
 
+parser = argparse.ArgumentParser(description="Generate PR description from branch and Linear issue")
+parser.add_argument("--issue", help="Override: issue key (e.g. FIN-587) instead of from branch")
+args = parser.parse_args()
+
 branch = subprocess.check_output(
     ["git", "rev-parse", "--abbrev-ref", "HEAD"]
 ).decode().strip()
 
-m = re.search(r"([a-z]+-\d+)", branch, re.IGNORECASE)
-if not m:
-    sys.exit("Branch name must contain issue key (e.g. lin-123)")
+if args.issue:
+    issue_key = args.issue.upper()
+else:
+    m = re.search(r"([a-z]+-\d+)", branch, re.IGNORECASE)
+    if not m:
+        sys.exit("Branch name must contain issue key (e.g. lin-123) or use --issue FIN-587")
+    issue_key = m.group(1).upper()
 
-issue_key = m.group(1).upper()
+m = re.match(r"^([A-Za-z]+)-(\d+)$", issue_key)
+if not m:
+    sys.exit(f"Invalid issue key format: {issue_key} (expected e.g. FIN-587)")
+team_key, issue_num = m.group(1).upper(), int(m.group(2))
 
 query = """
-query Issue($identifier: String!) {
-  issue(identifier: $identifier) {
-    identifier
-    title
+query IssueByTeamAndNumber($teamKey: String!, $number: Float!) {
+  issues(filter: { team: { key: { eq: $teamKey } }, number: { eq: $number } }, first: 1) {
+    nodes {
+      identifier
+      title
+    }
   }
 }
 """
-
-issue = gql(query, {"identifier": issue_key})["data"]["issue"]
+data = gql(query, {"teamKey": team_key, "number": float(issue_num)})
+nodes = data.get("data", {}).get("issues", {}).get("nodes", [])
+if not nodes:
+    sys.exit(f"Issue {issue_key} not found in Linear")
+issue = nodes[0]
 
 base = get_base_branch()
+
+# Stage, commit, and push
+subprocess.run(["git", "add", "-A"], check=True)
+subprocess.run(
+    ["git", "commit", "-m", f"{issue['identifier']}: {issue['title']}"],
+)  # may fail if nothing to commit
+subprocess.run(["git", "push"], check=True)
+
 diffstat = subprocess.check_output(
     ["git", "diff", "--stat", f"{base}...HEAD"]
 ).decode()

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import json
 import os
+import re
 import sys
 import urllib.request
 
@@ -32,19 +33,28 @@ if len(sys.argv) < 3:
 identifier = sys.argv[1].upper()
 target_state_name = " ".join(sys.argv[2:])
 
+# Parse identifier (e.g. FIN-587) into team key and number
+m = re.match(r"^([A-Za-z]+)-(\d+)$", identifier)
+if not m:
+    sys.exit(f"Invalid issue key format: {identifier} (expected e.g. FIN-587)")
+team_key, issue_num = m.group(1).upper(), int(m.group(2))
+
 # 1️⃣ Fetch issue (get issue ID + team ID)
 query_issue = """
-query IssueByIdentifier($identifier: String!) {
-  issue(identifier: $identifier) {
-    id
-    team { id name }
-    state { id name }
+query IssueByTeamAndNumber($teamKey: String!, $number: Float!) {
+  issues(filter: { team: { key: { eq: $teamKey } }, number: { eq: $number } }, first: 1) {
+    nodes {
+      id
+      team { id name }
+      state { id name }
+    }
   }
 }
 """
 
-data = gql(query_issue, {"identifier": identifier})
-issue = data.get("data", {}).get("issue")
+data = gql(query_issue, {"teamKey": team_key, "number": float(issue_num)})
+nodes = data.get("data", {}).get("issues", {}).get("nodes", [])
+issue = nodes[0] if nodes else None
 
 if not issue:
     print(f"Could not find issue {identifier}")
