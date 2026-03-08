@@ -11,6 +11,7 @@ from platform_utils import copy_to_clipboard, open_cursor
 
 API = os.environ.get("LINEAR_API_KEY")
 READY_STATE = os.environ.get("LINEAR_READY_STATE", "Ready for build")
+IN_PROGRESS_STATE = os.environ.get("LINEAR_IN_PROGRESS_STATE", "In Progress")
 PROMPT_DIR = os.path.join(os.path.dirname(__file__), "..", "prompt")
 
 CURSOR_FAST_PROMPT = """You are implementing this issue.
@@ -56,6 +57,38 @@ def slug(s):
     return s[:40]
 
 
+def set_issue_state(issue, target_state_name: str) -> None:
+    """Move issue to the given state in Linear."""
+    team_id = issue["team"]["id"]
+    issue_id = issue["id"]
+    q_states = """
+    query TeamStates($teamId: String!) {
+      team(id: $teamId) {
+        states { nodes { id name } }
+      }
+    }
+    """
+    data_states = gql(q_states, {"teamId": team_id})
+    states = (
+        data_states.get("data", {}).get("team", {}).get("states", {}).get("nodes", [])
+    ) or []
+    match = next((s for s in states if s["name"].lower() == target_state_name.lower()), None)
+    if not match:
+        print(f'Could not find state "{target_state_name}" for team {issue["team"]["name"]}.')
+        print("Available states:", ", ".join(s["name"] for s in states))
+        return
+    mutation = """
+    mutation UpdateIssue($id: String!, $stateId: String!) {
+      issueUpdate(id: $id, input: { stateId: $stateId }) { success }
+    }
+    """
+    res = gql(mutation, {"id": issue_id, "stateId": match["id"]})
+    if res.get("data", {}).get("issueUpdate", {}).get("success"):
+        print(f'✅ Linear status updated → {match["name"]}')
+    else:
+        print("❌ Failed to update Linear status")
+
+
 # Parse args
 parser = argparse.ArgumentParser(description="Pick issue, create branch, open Cursor")
 parser.add_argument("--prompt", help="Prompt mode (e.g. velocity, bugfix, refactor)")
@@ -82,6 +115,7 @@ query Issues($filter: IssueFilter) {
       title
       description
       url
+      team { id name }
     }
   }
 }
@@ -107,6 +141,8 @@ issue = issues[int(choice) - 1]
 
 branch = f"{issue['identifier'].lower()}-{slug(issue['title'])}"
 subprocess.check_call(["git", "checkout", "-b", branch])
+
+set_issue_state(issue, IN_PROGRESS_STATE)
 
 payload = f"{prompt_text}\n\nTitle: {issue['title']}\n\n{issue.get('description','')}"
 if copy_to_clipboard(payload):

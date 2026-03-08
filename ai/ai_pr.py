@@ -4,6 +4,7 @@ import re
 import subprocess
 import sys
 import json
+import urllib.error
 import urllib.request
 
 from platform_utils import copy_to_clipboard
@@ -31,16 +32,23 @@ def get_base_branch() -> str:
 
 
 def gql(query, variables=None):
+    body = json.dumps({"query": query, "variables": variables or {}}).encode("utf-8")
+    auth = API if API.startswith("Bearer ") or API.startswith("lin_api_") else f"Bearer {API}"
     req = urllib.request.Request(
         "https://api.linear.app/graphql",
-        data=json.dumps({"query": query, "variables": variables or {}}).encode("utf-8"),
+        data=body,
         headers={
             "Content-Type": "application/json",
-            "Authorization": API,
+            "Authorization": auth,
         },
+        method="POST",
     )
-    with urllib.request.urlopen(req) as resp:
-        return json.loads(resp.read().decode("utf-8"))
+    try:
+        with urllib.request.urlopen(req) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8") if e.fp else str(e)
+        sys.exit(f"Linear API error {e.code}: {body}")
 
 branch = subprocess.check_output(
     ["git", "rev-parse", "--abbrev-ref", "HEAD"]

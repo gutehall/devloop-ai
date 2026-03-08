@@ -1,10 +1,10 @@
 # ai-start
 
-Pick Linear issue, create branch, copy prompt to clipboard, open Cursor.
+Pick Linear issue, create branch, move issue to In Progress, copy prompt to clipboard, open Cursor.
 
 ## Purpose
 
-Lighter alternative to ai-go. Fetches issues in "Ready for build", lets you pick one, creates a branch, copies prompt + issue to clipboard, and opens Cursor. Supports selecting different Cursor prompt modes (e.g. bugfix, refactor).
+Lighter alternative to ai-go. Fetches issues in "Ready for build", lets you pick one, creates a branch, moves the issue to "In Progress" in Linear, copies prompt + issue to clipboard, and opens Cursor. Supports selecting different Cursor prompt modes (e.g. bugfix, refactor).
 
 ## Usage
 
@@ -27,6 +27,7 @@ ai-start --prompt velocity   # Explicit velocity (default)
 |----------|---------|-------------|
 | `LINEAR_API_KEY` | (required) | Linear API key |
 | `LINEAR_READY_STATE` | "Ready for build" | State to filter issues |
+| `LINEAR_IN_PROGRESS_STATE` | "In Progress" | State to move issue to after creating branch |
 
 ## Requirements
 
