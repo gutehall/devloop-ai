@@ -21,6 +21,9 @@ ws-create "Refactor API" --no-open-warp
 # Commit only: JSON already in clipboard (e.g. from previous Warp run)
 ws-create --commit-only
 
+# Watch clipboard: auto-create when valid JSON appears (timeout 60s)
+ws-create "Add auth flow" --watch
+
 # Custom prompts directory (default: prompt)
 ws-create --prompts-dir prompt
 ```
@@ -33,6 +36,7 @@ ws-create --prompts-dir prompt
 | `--prompts-dir` | prompt | Path to prompts directory (must contain warp_orchestrator.md) |
 | `--no-open-warp` | false | Do not auto-open Warp after copying prompt |
 | `--commit-only` | false | Skip planning; create in Linear from clipboard JSON |
+| `--watch` | false | Poll clipboard until valid JSON appears (timeout 60s), then create in Linear |
 
 ## Flow
 
@@ -42,6 +46,8 @@ ws-create --prompts-dir prompt
 4. **Create:** Press Enter; script reads clipboard and runs ai-linear-create
 
 With `--commit-only`, step 1–3 are skipped; clipboard must already contain the JSON.
+
+With `--watch`, step 4 is automatic: the script polls the clipboard every 1.5s; when valid JSON appears, it creates in Linear without pressing Enter. Timeout: 60 seconds.
 
 ## Requirements
 

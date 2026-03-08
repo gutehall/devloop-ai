@@ -88,6 +88,20 @@ def paste_from_clipboard() -> str:
     return ""
 
 
+def run_cursor_agent(prompt: str, cwd: str = ".") -> bool:
+    """
+    Run Cursor agent CLI with the given prompt in the project directory.
+    Returns True if agent ran, False if agent not found (fallback to editor + clipboard).
+    """
+    path = os.path.abspath(cwd) if cwd else os.getcwd()
+    try:
+        subprocess.run(["agent", "--version"], capture_output=True, check=True)
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return False
+    subprocess.Popen(["agent", prompt], cwd=path)
+    return True
+
+
 def open_cursor(cwd: str = ".") -> None:
     """Open Cursor in the given directory. Works when 'cursor' shell command is installed."""
     path = os.path.abspath(cwd) if cwd else os.getcwd()

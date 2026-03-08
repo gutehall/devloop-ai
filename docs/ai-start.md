@@ -12,7 +12,8 @@ Lighter alternative to ai-go. Fetches issues in "Ready for build", lets you pick
 ai-start                     # Default: cursor_velocity prompt
 ai-start --prompt bugfix     # Use cursor_bugfix for this issue
 ai-start --prompt refactor   # Use cursor_refactor_safe
-ai-start --prompt velocity   # Explicit velocity (default)
+ai-start --agent             # Run Cursor agent CLI instead of opening editor
+ai-start --no-status         # Do not set Linear status to In Progress
 ```
 
 ## Arguments
@@ -20,6 +21,8 @@ ai-start --prompt velocity   # Explicit velocity (default)
 | Option | Description |
 |--------|-------------|
 | `--prompt <name>` | Load prompt from `prompt/cursor_<name>.md` or `prompt/<name>.md` |
+| `--agent` | Run Cursor agent CLI with the prompt instead of opening editor (requires `agent` in PATH) |
+| `--no-status` | Do not set Linear status to In Progress |
 
 ## Environment Variables
 

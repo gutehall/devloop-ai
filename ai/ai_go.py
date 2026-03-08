@@ -1,19 +1,16 @@
 #!/usr/bin/env python3
 import argparse
-import json
 import os
-import re
 import subprocess
 import sys
-import urllib.request
 
-from platform_utils import copy_to_clipboard, open_cursor as _open_cursor
+from linear_utils import gql, set_issue_state, slug
+from platform_utils import copy_to_clipboard, open_cursor as _open_cursor, run_cursor_agent
 
-API = os.environ.get("LINEAR_API_KEY")
 READY_STATE = os.environ.get("LINEAR_READY_STATE", "Ready for build")
 IN_PROGRESS_STATE = os.environ.get("LINEAR_IN_PROGRESS_STATE", "In Progress")
 
-if not API:
+if not os.environ.get("LINEAR_API_KEY"):
     print("Missing LINEAR_API_KEY env var")
     sys.exit(1)
 
@@ -52,23 +49,6 @@ def sh(cmd: list[str]) -> str:
 
 def run(cmd: list[str]) -> None:
     subprocess.check_call(cmd)
-
-def popen(cmd: list[str]) -> None:
-    subprocess.Popen(cmd)
-
-def gql(query: str, variables=None) -> dict:
-    req = urllib.request.Request(
-        "https://api.linear.app/graphql",
-        data=json.dumps({"query": query, "variables": variables or {}}).encode("utf-8"),
-        headers={"Content-Type": "application/json", "Authorization": API},
-    )
-    with urllib.request.urlopen(req) as resp:
-        return json.loads(resp.read().decode("utf-8"))
-
-def slug(s: str) -> str:
-    s = s.lower()
-    s = re.sub(r"[^a-z0-9]+", "-", s).strip("-")
-    return s[:40]
 
 def ensure_clean_worktree():
     status = sh(["git", "status", "--porcelain"])
@@ -115,8 +95,8 @@ def create_branch(issue):
     run(["git", "checkout", "-b", branch])
     return branch
 
-def copy_cursor_payload(issue):
-    payload = f"""{CURSOR_FAST_PROMPT}
+def build_cursor_payload(issue):
+    return f"""{CURSOR_FAST_PROMPT}
 
 --- LINEAR ISSUE {issue['identifier']} ---
 Title: {issue['title']}
@@ -125,6 +105,10 @@ URL: {issue['url']}
 Description:
 {issue.get('description') or "(no description)"}
 """
+
+
+def copy_cursor_payload(issue):
+    payload = build_cursor_payload(issue)
     if not copy_to_clipboard(payload):
         print("Could not copy to clipboard. Paste manually:")
         print(payload[:200] + "..." if len(payload) > 200 else payload)
@@ -132,54 +116,11 @@ Description:
 def open_cursor():
     _open_cursor(".")
 
-def set_issue_state(issue, target_state_name: str):
-    # Find state id by name for the issue's team
-    team_id = issue["team"]["id"]
-    issue_id = issue["id"]
-
-    q_states = """
-    query TeamStates($teamId: String!) {
-      team(id: $teamId) {
-        states {
-          nodes { id name }
-        }
-      }
-    }
-    """
-    data_states = gql(q_states, {"teamId": team_id})
-    states = (
-        data_states.get("data", {})
-        .get("team", {})
-        .get("states", {})
-        .get("nodes", [])
-    ) or []
-
-    match = next((s for s in states if s["name"].lower() == target_state_name.lower()), None)
-    if not match:
-        print(f'Could not find state "{target_state_name}" for team {issue["team"]["name"]}.')
-        print("Available states:")
-        for s in states:
-            print(f"- {s['name']}")
-        sys.exit(1)
-
-    mutation = """
-    mutation UpdateIssue($id: String!, $stateId: String!) {
-      issueUpdate(id: $id, input: { stateId: $stateId }) {
-        success
-      }
-    }
-    """
-    res = gql(mutation, {"id": issue_id, "stateId": match["id"]})
-    ok = res.get("data", {}).get("issueUpdate", {}).get("success")
-    if ok:
-        print(f'✅ Linear status updated → {match["name"]}')
-    else:
-        print("❌ Failed to update Linear status")
-
 def main():
     ap = argparse.ArgumentParser(description="ai-go: pull, pick Linear issue, branch, open Cursor, copy prompt.")
     ap.add_argument("--no-pull", action="store_true", help="Do not run git pull --rebase")
-    ap.add_argument("--set-in-progress", action="store_true", help=f'Set Linear status to "{IN_PROGRESS_STATE}" after picking issue')
+    ap.add_argument("--no-status", action="store_true", help=f"Do not set Linear status to {IN_PROGRESS_STATE}")
+    ap.add_argument("--agent", action="store_true", help="Run Cursor agent CLI instead of opening editor (skips paste)")
     args = ap.parse_args()
 
     ensure_clean_worktree()
@@ -199,7 +140,7 @@ def main():
     print("\n→ Creating branch")
     branch = create_branch(issue)
 
-    if args.set_in_progress:
+    if not args.no_status:
         print(f'\n→ Setting Linear status to "{IN_PROGRESS_STATE}"')
         set_issue_state(issue, IN_PROGRESS_STATE)
 
@@ -207,7 +148,13 @@ def main():
     copy_cursor_payload(issue)
 
     print("\n→ Opening Cursor")
-    open_cursor()
+    full_payload = build_cursor_payload(issue)
+    if args.agent and run_cursor_agent(full_payload, "."):
+        print("Started Cursor agent CLI.")
+    else:
+        open_cursor()
+        if args.agent:
+            print("Cursor agent CLI not found. Opened Cursor editor — paste (Ctrl+V / Cmd+V) to implement.")
 
     print("\n✅ Done")
     print(f"Branch: {branch}")

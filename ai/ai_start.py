@@ -1,15 +1,12 @@
 #!/usr/bin/env python3
 import argparse
-import json
 import os
-import re
 import subprocess
 import sys
-import urllib.request
 
-from platform_utils import copy_to_clipboard, open_cursor
+from linear_utils import gql, set_issue_state, slug
+from platform_utils import copy_to_clipboard, open_cursor, run_cursor_agent
 
-API = os.environ.get("LINEAR_API_KEY")
 READY_STATE = os.environ.get("LINEAR_READY_STATE", "Ready for build")
 IN_PROGRESS_STATE = os.environ.get("LINEAR_IN_PROGRESS_STATE", "In Progress")
 PROMPT_DIR = os.path.join(os.path.dirname(__file__), "..", "prompt")
@@ -39,59 +36,11 @@ def load_prompt(name: str) -> str | None:
     return None
 
 
-def gql(query, variables=None):
-    req = urllib.request.Request(
-        "https://api.linear.app/graphql",
-        data=json.dumps({"query": query, "variables": variables or {}}).encode("utf-8"),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": API,
-        },
-    )
-    with urllib.request.urlopen(req) as resp:
-        return json.loads(resp.read().decode("utf-8"))
-
-def slug(s):
-    s = s.lower()
-    s = re.sub(r"[^a-z0-9]+", "-", s).strip("-")
-    return s[:40]
-
-
-def set_issue_state(issue, target_state_name: str) -> None:
-    """Move issue to the given state in Linear."""
-    team_id = issue["team"]["id"]
-    issue_id = issue["id"]
-    q_states = """
-    query TeamStates($teamId: String!) {
-      team(id: $teamId) {
-        states { nodes { id name } }
-      }
-    }
-    """
-    data_states = gql(q_states, {"teamId": team_id})
-    states = (
-        data_states.get("data", {}).get("team", {}).get("states", {}).get("nodes", [])
-    ) or []
-    match = next((s for s in states if s["name"].lower() == target_state_name.lower()), None)
-    if not match:
-        print(f'Could not find state "{target_state_name}" for team {issue["team"]["name"]}.')
-        print("Available states:", ", ".join(s["name"] for s in states))
-        return
-    mutation = """
-    mutation UpdateIssue($id: String!, $stateId: String!) {
-      issueUpdate(id: $id, input: { stateId: $stateId }) { success }
-    }
-    """
-    res = gql(mutation, {"id": issue_id, "stateId": match["id"]})
-    if res.get("data", {}).get("issueUpdate", {}).get("success"):
-        print(f'✅ Linear status updated → {match["name"]}')
-    else:
-        print("❌ Failed to update Linear status")
-
-
 # Parse args
 parser = argparse.ArgumentParser(description="Pick issue, create branch, open Cursor")
 parser.add_argument("--prompt", help="Prompt mode (e.g. velocity, bugfix, refactor)")
+parser.add_argument("--agent", action="store_true", help="Run Cursor agent CLI instead of opening editor (skips paste)")
+parser.add_argument("--no-status", action="store_true", help="Do not set Linear status to In Progress")
 args = parser.parse_args()
 
 prompt_text = CURSOR_FAST_PROMPT
@@ -102,7 +51,7 @@ if args.prompt:
     else:
         print(f"Prompt '{args.prompt}' not found, using default.")
 
-if not API:
+if not os.environ.get("LINEAR_API_KEY"):
     print("Missing LINEAR_API_KEY env var")
     sys.exit(1)
 
@@ -142,7 +91,8 @@ issue = issues[int(choice) - 1]
 branch = f"{issue['identifier'].lower()}-{slug(issue['title'])}"
 subprocess.check_call(["git", "checkout", "-b", branch])
 
-set_issue_state(issue, IN_PROGRESS_STATE)
+if not args.no_status:
+    set_issue_state(issue, IN_PROGRESS_STATE)
 
 payload = f"{prompt_text}\n\nTitle: {issue['title']}\n\n{issue.get('description','')}"
 if copy_to_clipboard(payload):
@@ -151,6 +101,11 @@ else:
     print("Could not copy to clipboard. Paste manually:")
     print(payload[:200] + "..." if len(payload) > 200 else payload)
 
-open_cursor(".")
+if args.agent and run_cursor_agent(payload, "."):
+    print("Started Cursor agent CLI.")
+else:
+    open_cursor(".")
+    if args.agent:
+        print("Cursor agent CLI not found. Opened Cursor editor — paste (⌘V) to implement.")
 
 print("Branch created:", branch)

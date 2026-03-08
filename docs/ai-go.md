@@ -9,9 +9,10 @@ One command to begin work on an issue. Ensures clean worktree, pulls latest chan
 ## Usage
 
 ```bash
-ai-go                        # Full flow
+ai-go                        # Full flow (sets Linear status to In Progress by default)
 ai-go --no-pull              # Skip git pull --rebase
-ai-go --set-in-progress      # Set Linear status to "In Progress" after picking
+ai-go --agent                # Run Cursor agent CLI instead of opening editor (skips paste)
+ai-go --no-status            # Do not set Linear status to In Progress
 ```
 
 ## Arguments
@@ -19,7 +20,8 @@ ai-go --set-in-progress      # Set Linear status to "In Progress" after picking
 | Option | Description |
 |--------|-------------|
 | `--no-pull` | Do not run `git pull --rebase` before picking an issue |
-| `--set-in-progress` | Update the selected issue's Linear status to "In Progress" |
+| `--agent` | Run Cursor agent CLI with the prompt instead of opening editor (requires `agent` in PATH) |
+| `--no-status` | Do not update the selected issue's Linear status to In Progress |
 
 ## Environment Variables
 
@@ -42,7 +44,7 @@ Use at the start of your coding session. After running:
 
 1. Paste (Ctrl+V / Cmd+V) into Cursor chat
 2. Implement the issue
-3. Use `ai-pr` and `ai-create-pr` when done
+3. Use `ai-pr` when done
 
 ## See Also
 
