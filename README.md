@@ -1,11 +1,11 @@
 # Devloop AI  
-### Warp → Linear → Cursor Automation
+### Warp / Claude → Linear → Cursor Automation
 
 An AI-driven development loop designed for high velocity and minimal manual overhead.
 
 This repository provides lightweight CLI scripts and prompt templates to orchestrate:
 
-- **Warp** – Planning & orchestration  
+- **Warp or Claude** – Planning & orchestration (use `ws-create --claude` when Warp is not installed)  
 - **Linear** – Source of truth (issues & projects)  
 - **Cursor** – AI implementation agent  
 - **GitHub** – PR & merge flow  
@@ -89,7 +89,11 @@ wo() { cat <path/to/your/repo>/prompt/warp_orchestrator.md | pbcopy && echo "✓
 wr() { cat <path/to/your/repo>/prompt/warp_review.md | pbcopy && echo "✓ warp_review copied"; }
 wd() { cat <path/to/your/repo>/prompt/warp_debug.md | pbcopy && echo "✓ warp_debug copied"; }
 wa() { cat <path/to/your/repo>/prompt/warp_architecture.md | pbcopy && echo "✓ warp_architecture copied"; }
-# Add more prompts if needed...
+
+# Claude quick commands (when Warp not installed)
+
+co() { cat <path/to/your/repo>/prompt/claude_orchestrator.md | pbcopy && echo "✓ claude_orchestrator copied"; }
+cs() { cat <path/to/your/repo>/prompt/claude_session_bootstrap.md | pbcopy && echo "✓ claude_session_bootstrap copied"; }
 ```
 
 **Windows:** Add to PowerShell profile or set in System Environment Variables.
@@ -119,26 +123,28 @@ chmod +x ai/ws_create.py
 
 # Daily Workflow
 
-## Plan in Warp
+## Plan in Warp or Claude
 
-Use `prompt/warp_velocity.md` to:
+Use `prompt/warp_velocity.md` (Warp) or `prompt/claude_orchestrator.md` (Claude) to:
 - Analyze the repo
 - Decide project vs single issue
 - Create Linear issues (status: Planned)
 
 Move ready work to **Ready for build**.
 
-**`ws-create`** — Automated Warp → Linear flow:
+**`ws-create`** — Automated planning → Linear flow:
 
 ```bash
-ws-create "Add user authentication flow"   # Task as argument
+ws-create "Add user authentication flow"   # Task as argument (Warp)
+ws-create "Add auth" --claude             # Use Claude when Warp not installed
 ws-create                                 # Prompts for task interactively
 ws-create --no-open-warp "Refactor API"   # Skip opening Warp
+ws-create --claude --no-open-claude       # Use Claude, don't auto-open
 ws-create --commit-only                   # JSON already in clipboard
 ws-create "Add auth" --watch              # Poll clipboard until valid JSON (60s timeout)
 ```
 
-Flow: copies `warp_orchestrator` + your task to clipboard, opens Warp, you paste and run the prompt. Warp outputs a JSON block; copy it, press Enter, and the script creates the project and issues in Linear via `ai-linear-create`. With `--watch`, the script polls the clipboard and auto-creates when valid JSON appears. With `--commit-only`, skips planning and creates from clipboard JSON directly.
+Flow: copies the orchestrator prompt + your task to clipboard, opens Warp or Claude, you paste and run the prompt. Output is a JSON block; copy it, press Enter, and the script creates the project and issues in Linear via `ai-linear-create`. With `--watch`, the script polls the clipboard and auto-creates when valid JSON appears. With `--commit-only`, skips planning and creates from clipboard JSON directly.
 
 **Quick issue overview and promote Planned → Ready:**
 

@@ -17,7 +17,8 @@ except ImportError:
             return ""
 
 PROMPTS_DIR_DEFAULT = "prompt"
-ORCH_PROMPT_FILE = "warp_orchestrator.md"
+WARP_ORCH_PROMPT = "warp_orchestrator.md"
+CLAUDE_ORCH_PROMPT = "claude_orchestrator.md"
 WATCH_INTERVAL = 1.5
 WATCH_TIMEOUT = 60
 
@@ -63,25 +64,43 @@ def run_ai_linear_create(json_text: str) -> int:
     p.communicate(json_text.encode("utf-8"))
     return p.returncode
 
+def open_planning_app(use_claude: bool) -> None:
+    """Open Warp or Claude app. On non-macOS or if app missing, user pastes manually."""
+    import platform
+    if platform.system() != "Darwin":
+        return
+    app = "Claude" if use_claude else "Warp"
+    try:
+        subprocess.Popen(["open", "-a", app])
+    except (subprocess.SubprocessError, FileNotFoundError):
+        pass
+
+
 def main():
     ap = argparse.ArgumentParser(
-        description="ws-create: generate structured Warp prompt, then create Project/Issues in Linear from Warp JSON output."
+        description="ws-create: generate structured planning prompt, then create Project/Issues in Linear from JSON output."
     )
-    ap.add_argument("task", nargs="*", help="Task description for Warp.")
+    ap.add_argument("task", nargs="*", help="Task description.")
     ap.add_argument("--prompts-dir", default=PROMPTS_DIR_DEFAULT, help="Path to prompts directory.")
-    ap.add_argument("--no-open-warp", action="store_true", help="Do not auto-open Warp.")
+    ap.add_argument("--claude", action="store_true", help="Use Claude instead of Warp (when Warp not installed).")
+    ap.add_argument("--no-open-warp", action="store_true", help="Do not auto-open Warp (ignored if --claude).")
+    ap.add_argument("--no-open-claude", action="store_true", help="Do not auto-open Claude (only with --claude).")
     ap.add_argument("--commit-only", action="store_true", help="Skip planning step; expect JSON already in clipboard and create in Linear.")
     ap.add_argument("--watch", action="store_true", help="Poll clipboard until valid JSON appears (timeout 60s), then create in Linear.")
     args = ap.parse_args()
 
+    use_claude = args.claude
+    orch_file = CLAUDE_ORCH_PROMPT if use_claude else WARP_ORCH_PROMPT
+    app_name = "Claude" if use_claude else "Warp"
+
     prompts_dir = Path(args.prompts_dir)
-    orch_path = prompts_dir / ORCH_PROMPT_FILE
+    orch_path = prompts_dir / orch_file
 
     if args.commit_only:
         clip = pbpaste()
         json_block = extract_json_block(clip) or clip.strip()
         if not json_block:
-            print("❌ Clipboard is empty. Copy the ```json ... ``` block from Warp, then run:")
+            print("❌ Clipboard is empty. Copy the ```json ... ``` block from Warp or Claude, then run:")
             print("   ws-create --commit-only")
             sys.exit(1)
         print("→ Creating in Linear from clipboard JSON…")
@@ -90,7 +109,7 @@ def main():
 
     task = " ".join(args.task).strip()
     if not task:
-        task = input("Describe the task for Warp: ").strip()
+        task = input(f"Describe the task for {app_name}: ").strip()
     if not task:
         print("No task provided.")
         sys.exit(1)
@@ -119,13 +138,17 @@ After the plan, output a JSON block between ```json fences with:
 """
     pbcopy(combined)
 
-    print("✅ Copied orchestrator prompt + task to clipboard.")
-    if not args.no_open_warp:
-        subprocess.Popen(["open", "-a", "Warp"])
+    print(f"✅ Copied {orch_file} + task to clipboard.")
+    if use_claude:
+        if not args.no_open_claude:
+            open_planning_app(use_claude=True)
+    else:
+        if not args.no_open_warp:
+            open_planning_app(use_claude=False)
 
     print("\nNext steps (still part of this single flow):")
-    print("1) Paste into Warp (⌘V) and run the prompt.")
-    print("2) In Warp output: copy the ```json ... ``` block to clipboard.")
+    print(f"1) Paste into {app_name} (⌘V) and run the prompt.")
+    print(f"2) In {app_name} output: copy the ```json ... ``` block to clipboard.")
     if args.watch:
         print("\nWatching clipboard (Ctrl+C to cancel, timeout 60s)…")
         start = time.monotonic()
@@ -145,7 +168,7 @@ After the plan, output a JSON block between ```json fences with:
         json_block = extract_json_block(clip) or clip.strip()
     if not json_block:
         print("❌ Could not find JSON in clipboard.")
-        print("Make sure you copied the ```json ... ``` block from Warp output.")
+        print(f"Make sure you copied the ```json ... ``` block from {app_name} output.")
         sys.exit(1)
 
     print("→ Creating Project/Issues in Linear…")

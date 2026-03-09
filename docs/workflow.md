@@ -4,7 +4,7 @@ This repo uses an AI-driven workflow optimized for fast execution.
 
 ## Tools
 
-- **Warp:** Planning and orchestration
+- **Warp or Claude:** Planning and orchestration (use `ws-create --claude` when Warp is not installed)
 - **Linear:** Source of truth (issues, projects, statuses)
 - **Cursor:** Implementation agent
 - **GitHub:** PRs and merge
@@ -33,16 +33,16 @@ Rule: Cursor only works on issues in **Ready for build**.
 
 ---
 
-## Planning (Warp → Linear)
+## Planning (Warp or Claude → Linear)
 
-1. Use Warp to scan the repo and plan work.
-2. Warp creates:
+1. Use Warp or Claude to scan the repo and plan work.
+2. The planner creates:
    - A single issue (simple work), OR
    - A project + multiple issues (complex work)
 3. Warp should create issues in status **Planned**.
 4. Human sanity-check, then move to **Ready for build**.
 
-**Tools:** [ws-create](ws-create.md) for full Warp → Linear flow, or [ai-linear-create](ai-linear-create.md) to create from JSON. Use `ai-list --state Planned --move-to-ready` to promote selected issues to Ready for build without opening Linear.
+**Tools:** [ws-create](ws-create.md) for full Warp/Claude → Linear flow (`ws-create --claude` when Warp not installed), or [ai-linear-create](ai-linear-create.md) to create from JSON. Use `ai-list --state Planned --move-to-ready` to promote selected issues to Ready for build without opening Linear.
 
 ---
 
