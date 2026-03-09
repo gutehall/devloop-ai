@@ -1,11 +1,11 @@
 # Devloop AI  
-### Warp → Linear → Cursor Automation
+### Warp / Claude → Linear → Cursor Automation
 
 An AI-driven development loop designed for high velocity and minimal manual overhead.
 
 This repository provides lightweight CLI scripts and prompt templates to orchestrate:
 
-- **Warp** – Planning & orchestration  
+- **Warp or Claude** – Planning & orchestration (use `ws-create --claude` when Warp is not installed)  
 - **Linear** – Source of truth (issues & projects)  
 - **Cursor** – AI implementation agent  
 - **GitHub** – PR & merge flow  
@@ -64,7 +64,7 @@ Install Cursor's shell command: In Cursor, press `Ctrl+Shift+P` → "Shell Comma
 export LINEAR_API_KEY="YOUR_LINEAR_API_KEY"
 export LINEAR_READY_STATE="Ready for build"
 # Optional: LINEAR_MAIN_BRANCH=origin/main  (default: origin/main or git config)
-# Optional: LINEAR_IN_PROGRESS_STATE="In Progress"  (for ai-go --set-in-progress)
+# Optional: LINEAR_IN_PROGRESS_STATE="In Progress"  (for ai-go / ai-start)
 # Optional: LINEAR_TEAM_ID=ENG or LINEAR_TEAM_NAME="Team Name"  (for ai-linear-create / ws-create)
 ```
 
@@ -74,7 +74,6 @@ Add aliases:
 alias ai-go='python3 <path/to/your/repo>/ai/ai_go.py'
 alias ai-start='python3 <path/to/your/repo>/ai/ai_start.py'
 alias ai-pr='python3 <path/to/your/repo>/ai/ai_pr.py'
-alias ai-create-pr='python3 <path/to/your/repo>/ai/ai_create_pr.py'
 alias ai-list='python3 <path/to/your/repo>/ai/ai_list.py'
 alias ai-prompt='python3 <path/to/your/repo>/ai/ai_prompt.py'
 alias ai-status='python3 <path/to/your/repo>/ai/ai_status.py'
@@ -90,7 +89,11 @@ wo() { cat <path/to/your/repo>/prompt/warp_orchestrator.md | pbcopy && echo "✓
 wr() { cat <path/to/your/repo>/prompt/warp_review.md | pbcopy && echo "✓ warp_review copied"; }
 wd() { cat <path/to/your/repo>/prompt/warp_debug.md | pbcopy && echo "✓ warp_debug copied"; }
 wa() { cat <path/to/your/repo>/prompt/warp_architecture.md | pbcopy && echo "✓ warp_architecture copied"; }
-# Add more prompts if needed...
+
+# Claude quick commands (when Warp not installed)
+
+co() { cat <path/to/your/repo>/prompt/claude_orchestrator.md | pbcopy && echo "✓ claude_orchestrator copied"; }
+cs() { cat <path/to/your/repo>/prompt/claude_session_bootstrap.md | pbcopy && echo "✓ claude_session_bootstrap copied"; }
 ```
 
 **Windows:** Add to PowerShell profile or set in System Environment Variables.
@@ -109,7 +112,6 @@ source ~/.zshrc   # or source ~/.bashrc
 chmod +x ai/ai_go.py
 chmod +x ai/ai_start.py
 chmod +x ai/ai_pr.py
-chmod +x ai/ai_create_pr.py
 chmod +x ai/ai_list.py
 chmod +x ai/ai_prompt.py
 chmod +x ai/ai_status.py
@@ -121,31 +123,35 @@ chmod +x ai/ws_create.py
 
 # Daily Workflow
 
-## Plan in Warp
+## Plan in Warp or Claude
 
-Use `prompt/warp_velocity.md` to:
+Use `prompt/warp_velocity.md` (Warp) or `prompt/claude_orchestrator.md` (Claude) to:
 - Analyze the repo
 - Decide project vs single issue
 - Create Linear issues (status: Planned)
 
 Move ready work to **Ready for build**.
 
-**`ws-create`** — Automated Warp → Linear flow:
+**`ws-create`** — Automated planning → Linear flow:
 
 ```bash
-ws-create "Add user authentication flow"   # Task as argument
+ws-create "Add user authentication flow"   # Task as argument (Warp)
+ws-create "Add auth" --claude             # Use Claude when Warp not installed
 ws-create                                 # Prompts for task interactively
 ws-create --no-open-warp "Refactor API"   # Skip opening Warp
+ws-create --claude --no-open-claude       # Use Claude, don't auto-open
 ws-create --commit-only                   # JSON already in clipboard
+ws-create "Add auth" --watch              # Poll clipboard until valid JSON (60s timeout)
 ```
 
-Flow: copies `warp_orchestrator` + your task to clipboard, opens Warp, you paste and run the prompt. Warp outputs a JSON block; copy it, press Enter, and the script creates the project and issues in Linear via `ai-linear-create`. With `--commit-only`, skips planning and creates from clipboard JSON directly.
+Flow: copies the orchestrator prompt + your task to clipboard, opens Warp or Claude, you paste and run the prompt. Output is a JSON block; copy it, press Enter, and the script creates the project and issues in Linear via `ai-linear-create`. With `--watch`, the script polls the clipboard and auto-creates when valid JSON appears. With `--commit-only`, skips planning and creates from clipboard JSON directly.
 
-**Quick issue overview:**
+**Quick issue overview and promote Planned → Ready:**
 
 ```bash
 ai-list                      # Issues in Ready for build
-ai-list --state "Planned"    # Filter by state
+ai-list --state "Planned"   # Filter by state
+ai-list --state Planned --move-to-ready   # Promote selected issues to Ready for build
 ai-list --mine               # Assigned to me
 ```
 
@@ -158,7 +164,8 @@ ai-list --mine               # Assigned to me
 ```bash
 ai-go                        # Pull, pick issue, branch, copy prompt, open Cursor
 ai-go --no-pull              # Skip git pull --rebase
-ai-go --set-in-progress      # Also set Linear status to In Progress
+ai-go --agent                # Run Cursor agent CLI instead of editor (skips paste)
+ai-go --no-status            # Do not set Linear status to In Progress
 ```
 
 **`ai-start`** — Lighter alternative with prompt selection:
@@ -166,7 +173,7 @@ ai-go --set-in-progress      # Also set Linear status to In Progress
 ```bash
 ai-start                     # Default: cursor_velocity prompt
 ai-start --prompt bugfix     # Use cursor_bugfix for this issue
-ai-start --prompt refactor   # Use cursor_refactor_safe
+ai-start --agent             # Run Cursor agent CLI instead of editor
 ```
 
 Both will:
@@ -185,25 +192,22 @@ Then:
 ## Create PR
 
 ```bash
-ai-pr                        # Generate description, copy to clipboard
-ai-create-pr                 # Create PR via GitHub CLI (uses clipboard)
-ai-pr && ai-create-pr        # Generate and create in one go
+ai-pr                        # Stage, commit, push, create PR — one command
+ai-pr --skip-commit          # Already committed; only generate PR body and create PR
+ai-pr --no-create            # Skip PR creation (only copy description to clipboard)
 ```
 
 `ai-pr` will:
-- Read current branch
-- Extract issue key
-- Fetch issue title
-- Generate PR description (richer template)
-- Copy to clipboard
-
-`ai-create-pr` creates the PR via `gh` (requires [GitHub CLI](https://cli.github.com/)). If clipboard is empty, it runs `ai-pr` first.
+- Create branch if on main (use `--issue FIN-587`)
+- Stage, commit, and push
+- Generate PR description and copy to clipboard
+- Create PR via [GitHub CLI](https://cli.github.com/) (`gh`)
 
 ---
 
 ## Status Handling
 
-**Preferred:** GitHub ↔ Linear integration automatically moves:
+**Preferred:** [GitHub–Linear integration](https://linear.app/docs/github) — install from Linear Settings → Integrations. ai-pr adds `Closes LIN-XXX` to the PR body; linking is automatic:
 - PR opened → In Review
 - PR merged → Done
 
@@ -245,7 +249,7 @@ ai-prompt warp_velocity      # Copy warp_velocity (for Warp)
 - Cursor installed (with shell command in PATH)
 - Linear API key
 - GitHub repository
-- GitHub CLI (`gh`) — for `ai-create-pr`
+- GitHub CLI (`gh`) — for `ai-pr` (PR creation)
 - `pyperclip` — `pip install -r requirements.txt`
 - **Linux only:** `xclip` or `xsel` (X11) or `wl-clipboard` (Wayland) for clipboard
 - **Optional:** [linear-cli](https://github.com/schpet/linear-cli) — for `ai-linear-create` / `ws-create` (uses `LINEAR_API_KEY` from env)
@@ -259,7 +263,7 @@ Your practical loop:
 1. Warp → planning
 2. `ai-go` or `ai-start` → coding
 3. Cursor → implement
-4. `ai-pr` → PR
+4. `ai-pr` → PR (stage, commit, push, create)
 5. Merge
 
 Linear becomes backend infrastructure — not your daily workspace.

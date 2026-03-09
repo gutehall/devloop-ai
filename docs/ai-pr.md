@@ -1,25 +1,29 @@
 # ai-pr
 
-Stage, commit, push, then generate PR description from current branch and copy to clipboard.
+Stage, commit, push, create PR — one command.
 
 ## Purpose
 
-Runs `git add -A`, `git commit` (with issue key and title as message), and `git push`. Then reads the current git branch, extracts the Linear issue key (e.g. lin-123), fetches the issue title from Linear, generates a PR body with summary, diffstat, testing steps, and linked issue, and copies it to clipboard.
+If on the base branch (e.g. main), creates a feature branch `{ISSUE}-{slugged-title}` first. Then runs `git add -A`, `git commit` (with issue key and title as message), and `git push`. Generates a PR body with summary, diffstat, testing steps, and linked issue, copies it to clipboard, and creates the PR via GitHub CLI (`gh pr create`).
 
 ## Usage
 
 ```bash
-ai-pr                    # Use issue key from branch name (e.g. lin-123-add-feature)
-ai-pr --issue FIN-587    # Override: use this issue key instead
+ai-pr                    # Use issue key from branch; stage, commit, push, create PR
+ai-pr --issue FIN-587    # Override; required when on main to create feature branch
+ai-pr --skip-commit      # Already committed; only generate PR body and create PR
+ai-pr --no-create        # Skip PR creation (only copy description to clipboard)
 ```
 
-Either the branch name must contain an issue key, or use `--issue` to specify it.
+Either the branch name must contain an issue key, or use `--issue` to specify it. When on the base branch (main), you must use `--issue` to create the feature branch. If there is nothing to commit, ai-pr still generates the PR description and creates the PR (or copies to clipboard with `--no-create`).
 
 ## Arguments
 
 | Option | Description |
 |--------|-------------|
 | `--issue <key>` | Override: use this issue key (e.g. FIN-587) instead of extracting from branch |
+| `--skip-commit` | Skip stage/commit/push (already committed; only generate PR and create via gh) |
+| `--no-create` | Skip creating PR via gh (only copy description to clipboard) |
 
 ## Environment Variables
 
@@ -33,6 +37,7 @@ Either the branch name must contain an issue key, or use `--issue` to specify it
 - Branch name must contain issue key (e.g. lin-123, PROJ-456)
 - Linear API key
 - Clipboard access
+- [GitHub CLI](https://cli.github.com/) (`gh`) installed and authenticated (for PR creation; use `--no-create` to skip)
 
 ## Output
 
@@ -47,12 +52,8 @@ PR body includes:
 
 ## Workflow Context
 
-Run after implementing an issue. `ai-pr` stages all changes, commits with `{ISSUE}: {title}`, and pushes. Then either:
-
-- Paste into GitHub when creating a PR manually, or
-- Run `ai-create-pr` to create the PR via gh CLI
+Run after implementing an issue. One command: stage, commit, push, and create the PR. Description is also copied to clipboard.
 
 ## See Also
 
-- [ai-create-pr](ai-create-pr.md) — Create PR via GitHub CLI
 - [workflow](workflow.md) — Full workflow

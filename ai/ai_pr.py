@@ -1,18 +1,12 @@
 #!/usr/bin/env python3
 import argparse
-import json
 import os
 import re
 import subprocess
 import sys
-import urllib.error
-import urllib.request
 
+from linear_utils import get_issue_by_key, slug
 from platform_utils import copy_to_clipboard
-
-API = os.environ.get("LINEAR_API_KEY")
-if not API:
-    sys.exit("Missing LINEAR_API_KEY")
 
 
 def get_base_branch() -> str:
@@ -32,27 +26,16 @@ def get_base_branch() -> str:
     return "origin/main"
 
 
-def gql(query, variables=None):
-    body = json.dumps({"query": query, "variables": variables or {}}).encode("utf-8")
-    auth = API if API.startswith("Bearer ") or API.startswith("lin_api_") else f"Bearer {API}"
-    req = urllib.request.Request(
-        "https://api.linear.app/graphql",
-        data=body,
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": auth,
-        },
-        method="POST",
-    )
-    try:
-        with urllib.request.urlopen(req) as resp:
-            return json.loads(resp.read().decode("utf-8"))
-    except urllib.error.HTTPError as e:
-        body = e.read().decode("utf-8") if e.fp else str(e)
-        sys.exit(f"Linear API error {e.code}: {body}")
+def is_base_branch(branch: str, base: str) -> bool:
+    """Check if current branch is the base (e.g. main)."""
+    local_base = base.replace("origin/", "") if base.startswith("origin/") else base
+    return branch == local_base
 
-parser = argparse.ArgumentParser(description="Generate PR description from branch and Linear issue")
+
+parser = argparse.ArgumentParser(description="Stage, commit, push, and create PR from branch and Linear issue")
 parser.add_argument("--issue", help="Override: issue key (e.g. FIN-587) instead of from branch")
+parser.add_argument("--no-create", action="store_true", help="Skip creating PR via gh (only copy to clipboard)")
+parser.add_argument("--skip-commit", action="store_true", help="Skip stage/commit/push (already committed, just create PR)")
 args = parser.parse_args()
 
 branch = subprocess.check_output(
@@ -67,35 +50,42 @@ else:
         sys.exit("Branch name must contain issue key (e.g. lin-123) or use --issue FIN-587")
     issue_key = m.group(1).upper()
 
-m = re.match(r"^([A-Za-z]+)-(\d+)$", issue_key)
-if not m:
+if not re.match(r"^[A-Za-z]+-\d+$", issue_key):
     sys.exit(f"Invalid issue key format: {issue_key} (expected e.g. FIN-587)")
-team_key, issue_num = m.group(1).upper(), int(m.group(2))
 
-query = """
-query IssueByTeamAndNumber($teamKey: String!, $number: Float!) {
-  issues(filter: { team: { key: { eq: $teamKey } }, number: { eq: $number } }, first: 1) {
-    nodes {
-      identifier
-      title
-    }
-  }
-}
-"""
-data = gql(query, {"teamKey": team_key, "number": float(issue_num)})
-nodes = data.get("data", {}).get("issues", {}).get("nodes", [])
-if not nodes:
+issue = get_issue_by_key(issue_key)
+if not issue:
     sys.exit(f"Issue {issue_key} not found in Linear")
-issue = nodes[0]
 
 base = get_base_branch()
 
-# Stage, commit, and push
-subprocess.run(["git", "add", "-A"], check=True)
-subprocess.run(
-    ["git", "commit", "-m", f"{issue['identifier']}: {issue['title']}"],
-)  # may fail if nothing to commit
-subprocess.run(["git", "push"], check=True)
+# Create branch if on base (e.g. main)
+created_branch = False
+if is_base_branch(branch, base) and not args.skip_commit:
+    new_branch = f"{issue['identifier'].lower()}-{slug(issue['title'])}"
+    subprocess.run(["git", "checkout", "-b", new_branch], check=True)
+    branch = new_branch
+    created_branch = True
+
+# Stage, commit, and push (unless --skip-commit)
+if not args.skip_commit:
+    subprocess.run(["git", "add", "-A"], check=True)
+    status = subprocess.run(
+        ["git", "status", "--porcelain"],
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    if status:
+        subprocess.run(
+            ["git", "commit", "-m", f"{issue['identifier']}: {issue['title']}"],
+            check=True,
+        )
+        # Always use -u for first push (branch created by ai-start has no upstream yet)
+        subprocess.run(["git", "push", "-u", "origin", branch], check=True)
+    else:
+        print("Nothing to commit (working tree clean, no staged changes).")
+        print("PR description will be generated from existing commits.")
+        print("If you meant to commit first, do so and run ai-pr again (or use --skip-commit).")
 
 diffstat = subprocess.check_output(
     ["git", "diff", "--stat", f"{base}...HEAD"]
@@ -126,3 +116,13 @@ if copy_to_clipboard(body):
 else:
     print("Could not copy to clipboard. Paste manually:")
     print(body[:300] + "..." if len(body) > 300 else body)
+
+# Create PR via GitHub CLI
+if not args.no_create:
+    try:
+        subprocess.run(["gh", "--version"], capture_output=True, check=True)
+        result = subprocess.run(["gh", "pr", "create", "--body", body])
+        sys.exit(result.returncode)
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        print("GitHub CLI (gh) not found. Install: https://cli.github.com/")
+        print("PR description is in clipboard. Create PR manually or run with --no-create")

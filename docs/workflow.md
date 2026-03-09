@@ -4,7 +4,7 @@ This repo uses an AI-driven workflow optimized for fast execution.
 
 ## Tools
 
-- **Warp:** Planning and orchestration
+- **Warp or Claude:** Planning and orchestration (use `ws-create --claude` when Warp is not installed)
 - **Linear:** Source of truth (issues, projects, statuses)
 - **Cursor:** Implementation agent
 - **GitHub:** PRs and merge
@@ -33,16 +33,16 @@ Rule: Cursor only works on issues in **Ready for build**.
 
 ---
 
-## Planning (Warp → Linear)
+## Planning (Warp or Claude → Linear)
 
-1. Use Warp to scan the repo and plan work.
-2. Warp creates:
+1. Use Warp or Claude to scan the repo and plan work.
+2. The planner creates:
    - A single issue (simple work), OR
    - A project + multiple issues (complex work)
 3. Warp should create issues in status **Planned**.
 4. Human sanity-check, then move to **Ready for build**.
 
-**Tools:** [ws-create](ws-create.md) for full Warp → Linear flow, or [ai-linear-create](ai-linear-create.md) to create from JSON.
+**Tools:** [ws-create](ws-create.md) for full Warp/Claude → Linear flow (`ws-create --claude` when Warp not installed), or [ai-linear-create](ai-linear-create.md) to create from JSON. Use `ai-list --state Planned --move-to-ready` to promote selected issues to Ready for build without opening Linear.
 
 ---
 
@@ -51,8 +51,10 @@ Rule: Cursor only works on issues in **Ready for build**.
 **ai-go** (recommended) — Full flow with safety checks:
 
 ```bash
-ai-go                        # Pull, pick issue, branch, copy prompt, open Cursor
-ai-go --set-in-progress      # Also update Linear status
+ai-go                        # Pull, pick issue, branch, copy prompt, open Cursor (sets In Progress)
+ai-go --no-pull              # Skip git pull --rebase
+ai-go --agent                # Run Cursor agent CLI instead of editor (skips paste)
+ai-go --no-status            # Do not set Linear status to In Progress
 ```
 
 **ai-start** — Lighter alternative with prompt selection:
@@ -60,9 +62,11 @@ ai-go --set-in-progress      # Also update Linear status
 ```bash
 ai-start                     # Default velocity prompt
 ai-start --prompt bugfix     # Use bugfix prompt
+ai-start --agent             # Run Cursor agent CLI instead of editor
+ai-start --no-status         # Do not set Linear status to In Progress
 ```
 
-Both fetch issues in **Ready for build**, let you pick one, create a branch, copy prompt + issue to clipboard, and open Cursor.
+Both fetch issues in **Ready for build**, let you pick one, create a branch, copy prompt + issue to clipboard, and open Cursor (or run agent CLI with `--agent`).
 
 See [ai-go](ai-go.md) and [ai-start](ai-start.md) for details.
 
@@ -79,18 +83,18 @@ See [ai-go](ai-go.md) and [ai-start](ai-start.md) for details.
 ## Create PR
 
 ```bash
-ai-pr                        # Generate PR description, copy to clipboard
-ai-create-pr                 # Create PR via GitHub CLI
-ai-pr && ai-create-pr        # One-liner
+ai-pr                        # Stage, commit, push, create PR — one command
+ai-pr --skip-commit          # Already committed; only generate PR body and create PR
+ai-pr --no-create            # Copy description to clipboard only
 ```
 
-See [ai-pr](ai-pr.md) and [ai-create-pr](ai-create-pr.md).
+See [ai-pr](ai-pr.md).
 
 ---
 
 ## Status Handling
 
-**Preferred:** GitHub ↔ Linear integration automatically moves:
+**Preferred:** [GitHub–Linear integration](https://linear.app/docs/github) — install from Linear Settings → Integrations. PR body includes `Closes LIN-XXX` (ai-pr adds this); linking is automatic:
 - PR opened → In Review
 - PR merged → Done
 

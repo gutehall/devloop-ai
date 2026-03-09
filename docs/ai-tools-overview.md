@@ -6,11 +6,10 @@ CLI scripts in `ai/` for the Warp → Linear → Cursor → GitHub workflow.
 
 | Tool | Alias | Purpose |
 |------|-------|---------|
-| ai_go.py | ai-go | Full start: pull, pick issue, branch, open Cursor |
-| ai_start.py | ai-start | Pick issue, create branch, open Cursor (with prompt selection) |
-| ai_pr.py | ai-pr | Generate PR description, copy to clipboard |
-| ai_create_pr.py | ai-create-pr | Create GitHub PR via gh CLI |
-| ai_list.py | ai-list | List Linear issues |
+| ai_go.py | ai-go | Full start: pull, pick issue, branch, open Cursor (optional `--agent`) |
+| ai_start.py | ai-start | Pick issue, create branch, open Cursor (optional `--agent`, prompt selection) |
+| ai_pr.py | ai-pr | Stage, commit, push, create PR via gh (`--skip-commit` if already committed) |
+| ai_list.py | ai-list | List Linear issues; `--move-to-ready` promotes Planned → Ready for build |
 | ai_prompt.py | ai-prompt | Copy prompt to clipboard or list prompts |
 | ai_status.py | ai-status | Update Linear issue state |
 | ai_done.py | ai-done | Mark current branch's issue as Done |
@@ -22,11 +21,13 @@ CLI scripts in `ai/` for the Warp → Linear → Cursor → GitHub workflow.
 ```
 Plan (Warp) → ai-list / ws-create / ai-linear-create
      ↓
-Start work → ai-go or ai-start
+Promote Planned → Ready → ai-list --state Planned --move-to-ready
+     ↓
+Start work → ai-go or ai-start (optionally --agent for Cursor CLI)
      ↓
 Implement (Cursor)
      ↓
-Create PR → ai-pr → ai-create-pr
+Create PR → ai-pr
      ↓
 Status → ai-status / ai-done
 ```
@@ -35,8 +36,7 @@ Status → ai-status / ai-done
 
 - [ai-go](ai-go.md) — Full start flow with safety checks
 - [ai-start](ai-start.md) — Lighter start with prompt selection
-- [ai-pr](ai-pr.md) — Generate PR description
-- [ai-create-pr](ai-create-pr.md) — Create PR via GitHub CLI
+- [ai-pr](ai-pr.md) — Stage, commit, push, create PR
 - [ai-list](ai-list.md) — List Linear issues
 - [ai-prompt](ai-prompt.md) — Copy prompts to clipboard
 - [ai-status](ai-status.md) — Update Linear issue state
