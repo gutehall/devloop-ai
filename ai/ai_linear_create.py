@@ -4,7 +4,6 @@ import os
 import re
 import sys
 import subprocess
-import urllib.request
 
 try:
     from platform_utils import paste_from_clipboard
@@ -15,10 +14,7 @@ except ImportError:
         except Exception:
             return ""
 
-API = os.environ.get("LINEAR_API_KEY")
-if not API:
-    print("Missing LINEAR_API_KEY env var")
-    sys.exit(1)
+from linear_utils import gql, gql_ok, print_errors
 
 DEFAULT_TEAM_ID = os.environ.get("LINEAR_TEAM_ID")
 DEFAULT_TEAM_NAME = os.environ.get("LINEAR_TEAM_NAME")
@@ -88,8 +84,9 @@ def create_issue_via_linear_cli(
         cmd.extend(["--project", project_name])
 
     env = {**os.environ}
-    if API:
-        env["LINEAR_API_KEY"] = API
+    api_key = os.environ.get("LINEAR_API_KEY")
+    if api_key:
+        env["LINEAR_API_KEY"] = api_key
 
     try:
         result = subprocess.run(
@@ -112,25 +109,6 @@ def create_issue_via_linear_cli(
     except Exception as e:
         print(f"linear-cli failed: {e}")
         return None
-
-def gql(query: str, variables=None) -> dict:
-    req = urllib.request.Request(
-        "https://api.linear.app/graphql",
-        data=json.dumps({"query": query, "variables": variables or {}}).encode("utf-8"),
-        headers={"Content-Type": "application/json", "Authorization": API},
-    )
-    with urllib.request.urlopen(req) as resp:
-        return json.loads(resp.read().decode("utf-8"))
-
-def gql_ok(resp: dict) -> bool:
-    return "errors" not in resp or not resp["errors"]
-
-def print_errors(resp: dict):
-    if resp.get("errors"):
-        print("GraphQL errors:")
-        for e in resp["errors"]:
-            msg = e.get("message")
-            print(f"- {msg}")
 
 def load_input_json() -> dict:
     # Prefer stdin if piped, else clipboard

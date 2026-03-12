@@ -4,9 +4,9 @@ Purpose:
 Generate high-value tests to improve reliability.
 
 Rules:
-- Focus on critical paths and edge cases.
+- Focus on critical paths, boundary conditions, and failure modes.
 - Prefer meaningful integration tests for behavior across components.
-- Avoid trivial tests that assert implementation details.
+- Avoid trivial tests that assert implementation details or low-value coverage.
 - Keep tests deterministic and fast where possible.
 
 Workflow:

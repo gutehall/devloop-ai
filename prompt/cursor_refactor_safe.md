@@ -5,8 +5,9 @@ Refactor code for readability/structure without changing behavior.
 
 Rules:
 - No behavioral changes allowed.
-- Keep changes incremental and reversible.
+- One logical step per commit; keep changes incremental and reversible.
 - Ensure full test suite passes after each logical change.
+- Have a rollback plan: each step should be independently revertible if needed.
 - Avoid introducing new abstractions unless clearly necessary.
 - Provide clear commit messages that describe intent and scope.
 

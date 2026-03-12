@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Copy a prompt to clipboard. List prompts if no name given."""
+import argparse
 import os
 import sys
 
@@ -8,7 +9,7 @@ from platform_utils import copy_to_clipboard
 PROMPT_DIR = os.path.join(os.path.dirname(__file__), "..", "prompt")
 
 
-def list_prompts():
+def list_prompts() -> None:
     """List all .md files in prompt dir (excluding README)."""
     if not os.path.isdir(PROMPT_DIR):
         print("Prompt directory not found:", PROMPT_DIR)
@@ -31,15 +32,19 @@ def fuzzy_match(name: str, candidates: list[str]) -> str | None:
     return prefix[0] if prefix else None
 
 
-def main():
-    if len(sys.argv) < 2:
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Copy a prompt to clipboard. List prompts if no name given.",
+        epilog="Example: ai-prompt velocity, ai-prompt warp_velocity",
+    )
+    parser.add_argument("name", nargs="?", help="Prompt name (e.g. velocity, bugfix, warp_velocity)")
+    args = parser.parse_args()
+
+    if args.name is None or not args.name.strip():
         list_prompts()
         return
 
-    name = sys.argv[1].strip()
-    if not name:
-        list_prompts()
-        return
+    name = args.name.strip()
 
     if not os.path.isdir(PROMPT_DIR):
         print("Prompt directory not found:", PROMPT_DIR)

@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 import argparse
 import os
+import re
 import subprocess
 import sys
 
+from cursor_utils import build_cursor_payload
 from linear_utils import gql, set_issue_state, slug
 from platform_utils import copy_to_clipboard, open_cursor as _open_cursor, run_cursor_agent
 
@@ -14,35 +16,6 @@ if not os.environ.get("LINEAR_API_KEY"):
     print("Missing LINEAR_API_KEY env var")
     sys.exit(1)
 
-CURSOR_FAST_PROMPT = """You are implementing this issue.
-
-Primary goal:
-Deliver a minimal working solution that satisfies the acceptance criteria.
-
-Rules:
-- Do not refactor unrelated code.
-- Do not redesign architecture.
-- Keep changes small and focused.
-- Follow existing patterns.
-- Prefer simple solutions over clever ones.
-- Stop if scope expands.
-
-Execution steps:
-1. Read relevant files before coding.
-2. Implement minimal solution.
-3. Add or update tests.
-4. Ensure CI passes.
-5. Re-check acceptance criteria.
-
-If ambiguity exists:
-- Make the safest reasonable assumption.
-- Document the assumption in code comments or PR description.
-
-Do not:
-- Introduce new abstractions unless required.
-- Change APIs unless explicitly required.
-- Perform speculative improvements.
-"""
 
 def sh(cmd: list[str]) -> str:
     return subprocess.check_output(cmd).decode("utf-8", errors="replace").strip()
@@ -82,29 +55,22 @@ def fetch_ready_issues():
     return data.get("data", {}).get("issues", {}).get("nodes", []) or []
 
 def pick_issue(issues):
+    import re
     for i, it in enumerate(issues, 1):
         print(f"{i}. {it['identifier']} — {it['title']}")
-    choice = input("\nSelect issue #: ").strip()
-    if not choice.isdigit() or not (1 <= int(choice) <= len(issues)):
-        print("Invalid selection.")
+    choice_raw = input("\nSelect issue #: ").strip()
+    m = re.search(r"\d+", choice_raw)
+    if not m or not (1 <= int(m.group(0)) <= len(issues)):
+        print(f"Invalid selection (enter a number from 1 to {len(issues)})")
         sys.exit(1)
-    return issues[int(choice) - 1]
+    return issues[int(m.group(0)) - 1]
 
-def create_branch(issue):
+def create_or_checkout_branch(issue):
+    """Create branch if it doesn't exist, else checkout existing (resume work)."""
     branch = f"{issue['identifier'].lower()}-{slug(issue['title'])}"
-    run(["git", "checkout", "-b", branch])
+    if subprocess.run(["git", "checkout", "-b", branch], stderr=subprocess.DEVNULL).returncode != 0:
+        subprocess.check_call(["git", "checkout", branch])
     return branch
-
-def build_cursor_payload(issue):
-    return f"""{CURSOR_FAST_PROMPT}
-
---- LINEAR ISSUE {issue['identifier']} ---
-Title: {issue['title']}
-URL: {issue['url']}
-
-Description:
-{issue.get('description') or "(no description)"}
-"""
 
 
 def copy_cursor_payload(issue):
@@ -138,7 +104,7 @@ def main():
     issue = pick_issue(issues)
 
     print("\n→ Creating branch")
-    branch = create_branch(issue)
+    branch = create_or_checkout_branch(issue)
 
     if not args.no_status:
         print(f'\n→ Setting Linear status to "{IN_PROGRESS_STATE}"')

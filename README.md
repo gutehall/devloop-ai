@@ -34,7 +34,36 @@ Linear auto-updates
 
 # Setup
 
-## Create tools folder
+## Quick setup (macOS, Linux, Windows)
+
+**macOS / Linux:**
+```bash
+git clone https://github.com/gutehall/devloop-ai.git
+cd devloop-ai
+./scripts/setup.sh
+```
+
+**Windows (PowerShell):**
+```powershell
+git clone https://github.com/gutehall/devloop-ai.git
+cd devloop-ai
+.\scripts\setup.ps1
+```
+
+The setup script will:
+- Create a virtual environment and install dependencies
+- Make CLI scripts executable (macOS/Linux)
+- Add aliases and Warp/Claude quick commands to your shell config
+- Prompt for your Linear API key
+- Remind you to install Cursor shell command and GitHub CLI (`gh`) if missing
+
+After setup, reload your shell (`source ~/.zshrc` or `source ~/.bashrc`) or open a new terminal.
+
+---
+
+## Manual setup
+
+### Create tools folder
 
 ```bash
 git clone https://github.com/gutehall/devloop-ai.git
@@ -240,6 +269,16 @@ ai-prompt warp_velocity      # Copy warp_velocity (for Warp)
 - Velocity over process weight
 
 ---
+
+# Testing
+
+Run the test suite:
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate  # or .venv\Scripts\activate on Windows
+pip install -r requirements.txt -r requirements-dev.txt
+pytest
+```
 
 # Requirements
 

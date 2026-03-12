@@ -1,12 +1,26 @@
 #!/usr/bin/env python3
+"""Stage, commit, push, and create PR from branch and Linear issue."""
 import argparse
 import os
 import re
 import subprocess
 import sys
 
-from linear_utils import get_issue_by_key, slug
+from linear_utils import get_issue_by_key, set_issue_state, slug
 from platform_utils import copy_to_clipboard
+
+# Strip bracket-paste escape sequences (^[[200~, ^[[201~) and other junk from argv
+# Some terminals (e.g. Warp) emit these when pasting commands
+def _sanitize_argv() -> None:
+    for i, arg in enumerate(sys.argv):
+        cleaned = re.sub(r"\x1b\[2?0?[01]~", "", arg)  # \e[200~, \e[201~, \e[20~, \e[21~
+        cleaned = re.sub(r"^\^P", "", cleaned)  # Leading ^P from some paste flows
+        sys.argv[i] = cleaned.strip()
+
+
+_sanitize_argv()
+
+DONE_STATE = os.environ.get("LINEAR_DONE_STATE", "Done")
 
 
 def get_base_branch() -> str:
@@ -36,6 +50,7 @@ parser = argparse.ArgumentParser(description="Stage, commit, push, and create PR
 parser.add_argument("--issue", help="Override: issue key (e.g. FIN-587) instead of from branch")
 parser.add_argument("--no-create", action="store_true", help="Skip creating PR via gh (only copy to clipboard)")
 parser.add_argument("--skip-commit", action="store_true", help="Skip stage/commit/push (already committed, just create PR)")
+parser.add_argument("--no-status", action="store_true", help=f"Do not set Linear issue to {DONE_STATE}")
 args = parser.parse_args()
 
 branch = subprocess.check_output(
@@ -118,11 +133,19 @@ else:
     print(body[:300] + "..." if len(body) > 300 else body)
 
 # Create PR via GitHub CLI
+pr_created = False
 if not args.no_create:
     try:
         subprocess.run(["gh", "--version"], capture_output=True, check=True)
         result = subprocess.run(["gh", "pr", "create", "--body", body])
+        pr_created = result.returncode == 0
+        if pr_created and not args.no_status:
+            set_issue_state(issue, DONE_STATE)
         sys.exit(result.returncode)
     except (subprocess.CalledProcessError, FileNotFoundError):
         print("GitHub CLI (gh) not found. Install: https://cli.github.com/")
         print("PR description is in clipboard. Create PR manually or run with --no-create")
+        sys.exit(1)
+else:
+    if not args.no_status:
+        set_issue_state(issue, DONE_STATE)

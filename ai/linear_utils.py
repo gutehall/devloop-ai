@@ -41,6 +41,20 @@ def gql(query: str, variables: dict | None = None) -> dict:
         sys.exit(f"Linear API error {e.code}: {err_body}")
 
 
+def gql_ok(resp: dict) -> bool:
+    """Return True if response has no GraphQL errors."""
+    return "errors" not in resp or not resp["errors"]
+
+
+def print_errors(resp: dict) -> None:
+    """Print GraphQL errors from response to stderr."""
+    if resp.get("errors"):
+        print("GraphQL errors:")
+        for e in resp["errors"]:
+            msg = e.get("message", str(e))
+            print(f"- {msg}")
+
+
 def slug(s: str) -> str:
     """Slugify for branch names."""
     s = s.lower()
