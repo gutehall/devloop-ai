@@ -1,14 +1,13 @@
-# Workflow: Warp → Linear → Cursor (macOS, Linux, Windows + GitHub)
+# Workflow: Claude Code → Linear → GitHub
 
 This repo uses an AI-driven workflow optimized for fast execution.
 
 ## Tools
 
-- **Warp or Claude:** Planning and orchestration (use `ws-create --claude` when Warp is not installed)
+- **Claude Code:** Planning, orchestration, and implementation (`/plan`, `/next`, `/done`)
 - **Linear:** Source of truth (issues, projects, statuses)
-- **Cursor:** Implementation agent
 - **GitHub:** PRs and merge
-- **Local scripts:** See [ai-tools-overview](ai-tools-overview.md) for full reference
+- **Local scripts:** See [ai-tools-overview](ai-tools-overview.md) for fallback reference
 
 ---
 
@@ -29,78 +28,77 @@ Started:
 Completed:
 - Done
 
-Rule: Cursor only works on issues in **Ready for build**.
+Rule: `/next` only works on issues in **Ready for build**.
 
 ---
 
-## Planning (Warp or Claude → Linear)
+## Planning (Claude Code → Linear)
 
-1. Use Warp or Claude to scan the repo and plan work.
-2. The planner creates:
-   - A single issue (simple work), OR
-   - A project + multiple issues (complex work)
-3. Warp should create issues in status **Planned**.
-4. Human sanity-check, then move to **Ready for build**.
+Use `/plan` in Claude Code to read Linear state and create issues directly via MCP.
 
-**Tools:** [ws-create](ws-create.md) for full Warp/Claude → Linear flow (`ws-create --claude` when Warp not installed), or [ai-linear-create](ai-linear-create.md) to create from JSON. Use `ai-list --state Planned --move-to-ready` to promote selected issues to Ready for build without opening Linear.
+```
+/plan "Add user authentication flow"
+/plan                                # Open-ended planning session
+```
+
+Claude reads existing issues and projects, drafts new ones, creates them in Linear via MCP. No clipboard, no intermediate scripts.
+
+After planning, promote issues to **Ready for build** in Linear (or use `ai-list --state Planned --move-to-ready` as fallback).
 
 ---
 
 ## Start Work
 
-**ai-go** (recommended) — Full flow with safety checks:
-
-```bash
-ai-go                        # Pull, pick issue, branch, copy prompt, open Cursor (sets In Progress)
-ai-go --no-pull              # Skip git pull --rebase
-ai-go --agent                # Run Cursor agent CLI instead of editor (skips paste)
-ai-go --no-status            # Do not set Linear status to In Progress
+```
+/next           # List unblocked issues, pick one, implement
+/next FIN-42    # Jump straight to a specific issue
 ```
 
-**ai-start** — Lighter alternative with prompt selection:
+Claude Code will:
+1. Set the issue In Progress in Linear
+2. Create the git branch
+3. Read the issue and explore relevant code
+4. Implement — minimal solution, no plan mode gate
 
-```bash
-ai-start                     # Default velocity prompt
-ai-start --prompt bugfix     # Use bugfix prompt
-ai-start --agent             # Run Cursor agent CLI instead of editor
-ai-start --no-status         # Do not set Linear status to In Progress
-```
-
-Both fetch issues in **Ready for build**, let you pick one, create a branch, copy prompt + issue to clipboard, and open Cursor (or run agent CLI with `--agent`).
-
-See [ai-go](ai-go.md) and [ai-start](ai-start.md) for details.
-
----
-
-## Implement (Cursor)
-
-1. Paste (Ctrl+V / Cmd+V) into Cursor chat.
-2. Implement the issue.
-3. Run tests and ensure CI passes.
+See [claude_velocity.md](../prompt/claude_velocity.md) for implementation rules.
 
 ---
 
 ## Create PR
 
-```bash
-ai-pr                        # Stage, commit, push, create PR — one command
-ai-pr --skip-commit          # Already committed; only generate PR body and create PR
-ai-pr --no-create            # Copy description to clipboard only
+```
+/done           # Commit, push, create PR with "Closes ID", print URL
+/done FIN-42    # Specify issue explicitly
 ```
 
-See [ai-pr](ai-pr.md).
+Claude Code will:
+1. Detect issue from branch name
+2. Show git log + diff stat
+3. Stage and commit any uncommitted changes
+4. Push branch
+5. Create PR via `gh pr create` with `Closes FIN-42` in body
+
+The `Closes <ID>` triggers Linear's GitHub integration to auto-move the issue to Done on merge.
 
 ---
 
 ## Status Handling
 
-**Preferred:** [GitHub–Linear integration](https://linear.app/docs/github) — install from Linear Settings → Integrations. PR body includes `Closes LIN-XXX` (ai-pr adds this); linking is automatic:
+**Automatic via GitHub–Linear integration:** PR body includes `Closes FIN-XXX` (`/done` adds this):
 - PR opened → In Review
 - PR merged → Done
 
-**Manual:** [ai-status](ai-status.md) or [ai-done](ai-done.md):
+**Manual fallback:**
 
 ```bash
 ai-status LIN-123 "In Progress"
 ai-done                      # Mark current issue Done (after merge)
 ```
+
+---
+
+## Fallback: Python CLI Tools
+
+The Python scripts (`ai-go`, `ai-start`, `ws-create`, `ai-pr`) are retained as fallback but deprecated. Use Claude Code commands by default.
+
+See [ai-tools-overview](ai-tools-overview.md) for reference.

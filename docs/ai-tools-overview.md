@@ -1,35 +1,47 @@
 # AI Tools Overview
 
-CLI scripts in `ai/` for the Warp → Linear → Cursor → GitHub workflow.
+Fallback CLI scripts in `ai/`. Primary workflow uses Claude Code (`/plan`, `/next`, `/done`).
 
 ## Quick Reference
 
-| Tool | Alias | Purpose |
-|------|-------|---------|
-| ai_go.py | ai-go | Full start: pull, pick issue, branch, open Cursor (optional `--agent`) |
-| ai_start.py | ai-start | Pick issue, create branch, open Cursor (optional `--agent`, prompt selection) |
-| ai_pr.py | ai-pr | Stage, commit, push, create PR via gh (`--skip-commit` if already committed) |
-| ai_list.py | ai-list | List Linear issues; `--move-to-ready` promotes Planned → Ready for build |
-| ai_prompt.py | ai-prompt | Copy prompt to clipboard or list prompts |
-| ai_status.py | ai-status | Update Linear issue state |
-| ai_done.py | ai-done | Mark current branch's issue as Done |
-| ai_linear_create.py | ai-linear-create | Create Linear project/issues from JSON |
-| ws_create.py | ws-create | Warp orchestration: prompt + task → create in Linear |
+| Tool | Alias | Status | Purpose |
+|------|-------|--------|---------|
+| ai_go.py | ai-go | deprecated | Full start: pull, pick issue, branch, open Cursor |
+| ai_start.py | ai-start | deprecated | Pick issue, create branch, open Cursor |
+| ai_pr.py | ai-pr | active | Stage, commit, push, create PR via gh |
+| ai_list.py | ai-list | active | List Linear issues; `--move-to-ready` promotes Planned → Ready |
+| ai_prompt.py | ai-prompt | active | Copy prompt to clipboard or list prompts |
+| ai_status.py | ai-status | active | Update Linear issue state |
+| ai_done.py | ai-done | active | Mark current branch's issue as Done |
+| ai_linear_create.py | ai-linear-create | active | Create Linear project/issues from JSON |
+| ws_create.py | ws-create | deprecated | Warp orchestration → Linear (replaced by `/plan`) |
 
-## Workflow Steps
+## Primary Workflow (Claude Code)
 
 ```
-Plan (Warp) → ai-list / ws-create / ai-linear-create
+/plan → Linear issues created via MCP
      ↓
-Promote Planned → Ready → ai-list --state Planned --move-to-ready
+/next → branch + implement
      ↓
-Start work → ai-go or ai-start (optionally --agent for Cursor CLI)
+/done → commit + push + PR (Closes ID)
+     ↓
+GitHub merge → Linear auto-Done
+```
+
+## Fallback Workflow (Python CLI)
+
+```
+ws-create / ai-linear-create → Linear issues
+     ↓
+ai-list --state Planned --move-to-ready
+     ↓
+ai-go or ai-start
      ↓
 Implement (Cursor)
      ↓
-Create PR → ai-pr
+ai-pr
      ↓
-Status → ai-status / ai-done
+ai-status / ai-done
 ```
 
 ## Documentation

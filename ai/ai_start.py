@@ -1,3 +1,4 @@
+# DEPRECATED: Use Claude Code `/next` instead. Retained as fallback.
 #!/usr/bin/env python3
 import argparse
 import os
